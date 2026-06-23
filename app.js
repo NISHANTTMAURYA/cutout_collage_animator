@@ -200,6 +200,7 @@ const DOM = {
     cutoutHoldVal: document.getElementById('cutout-hold-val'),
 
     // Custom Audio Editor
+    btnUploadMusic: document.getElementById('btn-upload-music'),
     customAudioEditor: document.getElementById('custom-audio-editor'),
     audioFilenameBadge: document.getElementById('audio-filename-badge'),
     musicVolumeSlider: document.getElementById('music-volume-slider'),
@@ -590,6 +591,14 @@ async function loadProject(projectId) {
         }
         if (DOM.musicSelect) {
             DOM.musicSelect.value = state.musicTheme;
+        }
+        if (DOM.btnUploadMusic) {
+            DOM.btnUploadMusic.style.display = state.musicTheme === 'custom' ? 'flex' : 'none';
+            if (state.musicTheme === 'custom' && !project.audioBlob) {
+                DOM.btnUploadMusic.classList.add('pulse-highlight');
+            } else {
+                DOM.btnUploadMusic.classList.remove('pulse-highlight');
+            }
         }
         if (DOM.musicVolumeSlider) {
             DOM.musicVolumeSlider.value = Math.round(state.musicVolume * 100);
@@ -1139,15 +1148,29 @@ function setupEventListeners() {
     // Music theme selector
     DOM.musicSelect.addEventListener('change', (e) => {
         state.musicTheme = e.target.value;
+        
+        // Show/hide select custom audio button
+        if (DOM.btnUploadMusic) {
+            DOM.btnUploadMusic.style.display = state.musicTheme === 'custom' ? 'flex' : 'none';
+            if (state.musicTheme === 'custom' && !state.customAudioFileBlob) {
+                DOM.btnUploadMusic.classList.add('pulse-highlight');
+            } else {
+                DOM.btnUploadMusic.classList.remove('pulse-highlight');
+            }
+        }
+        
         if (state.musicTheme === 'custom') {
             if (state.customAudioFileBlob) {
                 DOM.customAudioEditor.style.display = 'flex';
-                // Trigger play if already playing
                 if (state.isPlaying) {
                     audio.start(onAudioBeat);
                 }
             } else {
-                DOM.customAudioInput.click();
+                try {
+                    DOM.customAudioInput.click();
+                } catch (err) {
+                    console.warn("Blocked programmatic click on file input:", err);
+                }
             }
         } else {
             if (DOM.customAudioEditor) DOM.customAudioEditor.style.display = 'none';
@@ -1162,12 +1185,24 @@ function setupEventListeners() {
         triggerAutosave();
     });
 
+    if (DOM.btnUploadMusic) {
+        DOM.btnUploadMusic.addEventListener('click', (e) => {
+            e.preventDefault();
+            DOM.customAudioInput.click();
+        });
+    }
+
     DOM.customAudioInput.addEventListener('change', (e) => {
         const file = e.target.files[0];
         if (file) {
             // Strip system File wrapper to avoid DataCloneError in IndexedDB
             state.customAudioFileBlob = new Blob([file], { type: file.type });
             state.customAudioFilename = file.name;
+            
+            if (DOM.btnUploadMusic) {
+                DOM.btnUploadMusic.classList.remove('pulse-highlight');
+            }
+            
             audio.loadCustomAudioFile(file).then((decodedBuffer) => {
                 state.customAudioStart = 0;
                 state.customAudioEnd = decodedBuffer.duration;
@@ -1303,6 +1338,315 @@ function setupEventListeners() {
             updatePreviewContent();
         }
     });
+
+    // HUD Playback seek / scrub controls
+    if (DOM.hudProgressBar) {
+        const handleSeek = (e) => {
+            const rect = DOM.hudProgressBar.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const percent = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+            const totalDuration = state.slides.length * state.slideDuration;
+            state.playTime = percent * totalDuration;
+            if (renderer) {
+                renderer.draw(state.playTime);
+            }
+            updateHudTimeline(totalDuration);
+        };
+        
+        DOM.hudProgressBar.addEventListener('mousedown', (e) => {
+            handleSeek(e);
+            const moveHandler = (moveEvent) => {
+                handleSeek(moveEvent);
+            };
+            const upHandler = () => {
+                window.removeEventListener('mousemove', moveHandler);
+                window.removeEventListener('mouseup', upHandler);
+            };
+            window.addEventListener('mousemove', moveHandler);
+            window.addEventListener('mouseup', upHandler);
+        });
+
+        DOM.hudProgressBar.addEventListener('touchstart', (e) => {
+            handleSeek(e);
+            const moveHandler = (moveEvent) => {
+                handleSeek(moveEvent);
+            };
+            const upHandler = () => {
+                window.removeEventListener('touchmove', moveHandler);
+                window.removeEventListener('touchend', upHandler);
+            };
+            window.addEventListener('touchmove', moveHandler);
+            window.addEventListener('touchend', upHandler);
+        }, { passive: true });
+    }
+
+    if (DOM.hudRewindBtn) {
+        DOM.hudRewindBtn.addEventListener('click', () => {
+            state.playTime = Math.max(0, state.playTime - 3);
+            if (renderer) renderer.draw(state.playTime);
+            const totalDuration = state.slides.length * state.slideDuration;
+            updateHudTimeline(totalDuration);
+        });
+    }
+
+    if (DOM.hudForwardBtn) {
+        DOM.hudForwardBtn.addEventListener('click', () => {
+            const totalDuration = state.slides.length * state.slideDuration;
+            state.playTime = Math.min(totalDuration, state.playTime + 3);
+            if (renderer) renderer.draw(state.playTime);
+            updateHudTimeline(totalDuration);
+        });
+    }
+
+    // Image Preview Modal Tab 3: Crop
+    if (DOM.tabPreviewCrop) {
+        DOM.tabPreviewCrop.addEventListener('click', () => {
+            state.previewTab = 'crop';
+            DOM.tabPreviewCrop.classList.add('active');
+            DOM.tabPreviewOrig.classList.remove('active');
+            DOM.tabPreviewCutout.classList.remove('active');
+            updatePreviewContent();
+        });
+    }
+
+    // Image Preview Modal Cutout Editor Controls
+    if (DOM.prevToolBrush) {
+        DOM.prevToolBrush.addEventListener('click', () => {
+            state.prevEditorTool = 'brush';
+            DOM.prevToolBrush.classList.add('active');
+            DOM.prevToolEraser.classList.remove('active');
+            if (DOM.prevBrushToolIndicator) DOM.prevBrushToolIndicator.textContent = "Mode: Brush (Reveal)";
+        });
+    }
+
+    if (DOM.prevToolEraser) {
+        DOM.prevToolEraser.addEventListener('click', () => {
+            state.prevEditorTool = 'eraser';
+            DOM.prevToolEraser.classList.add('active');
+            DOM.prevToolBrush.classList.remove('active');
+            if (DOM.prevBrushToolIndicator) DOM.prevBrushToolIndicator.textContent = "Mode: Eraser (Remove)";
+        });
+    }
+
+    if (DOM.prevBrushSizeSlider) {
+        DOM.prevBrushSizeSlider.addEventListener('input', (e) => {
+            state.prevBrushSize = parseInt(e.target.value);
+            DOM.prevBrushSizeVal.textContent = state.prevBrushSize + 'px';
+        });
+    }
+
+    if (DOM.prevToolClear) {
+        DOM.prevToolClear.addEventListener('click', () => {
+            const slide = state.slides[state.previewActiveIdx];
+            if (slide && slide.mask) {
+                const ctx = slide.mask.getContext('2d');
+                ctx.clearRect(0, 0, slide.mask.width, slide.mask.height);
+                slide.cutout = renderer.generateCutout(slide.img, slide.mask);
+                renderer.setSlides(state.slides);
+                triggerAutosave();
+                drawPreviewCutout();
+                
+                if (state.currentStep === 2 && state.activeSlideIdx === state.previewActiveIdx) {
+                    loadSlideIntoEditor();
+                }
+            }
+        });
+    }
+
+    if (DOM.prevToolMagic) {
+        DOM.prevToolMagic.addEventListener('click', async () => {
+            const slide = state.slides[state.previewActiveIdx];
+            if (!slide) return;
+            
+            // Show loading overlay on cutout preview
+            const canvas = DOM.previewModalCanvasCutout;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = 'rgba(0,0,0,0.6)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#ffffff';
+            ctx.font = '14px Outfit';
+            ctx.textAlign = 'center';
+            ctx.fillText('AI is extracting subject...', canvas.width / 2, canvas.height / 2);
+            
+            try {
+                const mask = await detectSubject(slide.img, 0.4);
+                slide.mask = mask;
+                slide.cutout = renderer.generateCutout(slide.img, slide.mask);
+                renderer.setSlides(state.slides);
+                triggerAutosave();
+                drawPreviewCutout();
+                
+                if (state.currentStep === 2 && state.activeSlideIdx === state.previewActiveIdx) {
+                    loadSlideIntoEditor();
+                }
+            } catch (err) {
+                console.error("AI extraction failed in preview:", err);
+                alert("AI segmentation failed. You can still manually paint/erase.");
+                drawPreviewCutout();
+            }
+        });
+    }
+
+    // Image Preview Modal Canvas Cutout mouse/touch paint events
+    if (DOM.previewModalCanvasCutout) {
+        const getPrevCoords = (e) => {
+            const canvas = DOM.previewModalCanvasCutout;
+            const rect = canvas.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            return {
+                x: ((clientX - rect.left) / rect.width) * canvas.width,
+                y: ((clientY - rect.top) / rect.height) * canvas.height
+            };
+        };
+        
+        const prevPaint = (e) => {
+            if (!state.prevIsDrawing) return;
+            e.preventDefault();
+            
+            const slide = state.slides[state.previewActiveIdx];
+            if (!slide) return;
+            
+            const coords = getPrevCoords(e);
+            const mCtx = slide.mask.getContext('2d');
+            const brushPx = state.prevBrushSize;
+            
+            mCtx.save();
+            mCtx.lineCap = 'round';
+            mCtx.lineJoin = 'round';
+            mCtx.lineWidth = brushPx;
+            
+            if (state.prevEditorTool === 'brush') {
+                mCtx.globalCompositeOperation = 'source-over';
+                mCtx.strokeStyle = '#ffffff';
+                mCtx.fillStyle = '#ffffff';
+            } else {
+                mCtx.globalCompositeOperation = 'destination-out';
+                mCtx.strokeStyle = 'rgba(0,0,0,1)';
+                mCtx.fillStyle = 'rgba(0,0,0,1)';
+            }
+            
+            mCtx.beginPath();
+            if (state.prevLastX !== undefined) {
+                mCtx.moveTo(state.prevLastX, state.prevLastY);
+                mCtx.lineTo(coords.x, coords.y);
+                mCtx.stroke();
+            } else {
+                mCtx.arc(coords.x, coords.y, brushPx / 2, 0, Math.PI * 2);
+                mCtx.fill();
+            }
+            mCtx.restore();
+            
+            state.prevLastX = coords.x;
+            state.prevLastY = coords.y;
+            
+            drawPreviewCutout();
+        };
+        
+        const prevStartPainting = (e) => {
+            state.prevIsDrawing = true;
+            state.prevLastX = undefined;
+            state.prevLastY = undefined;
+            prevPaint(e);
+        };
+        
+        const prevStopPainting = () => {
+            if (!state.prevIsDrawing) return;
+            state.prevIsDrawing = false;
+            state.prevLastX = undefined;
+            state.prevLastY = undefined;
+            
+            const slide = state.slides[state.previewActiveIdx];
+            if (slide) {
+                slide.cutout = renderer.generateCutout(slide.img, slide.mask);
+                renderer.setSlides(state.slides);
+                triggerAutosave();
+                
+                if (state.currentStep === 2 && state.activeSlideIdx === state.previewActiveIdx) {
+                    loadSlideIntoEditor();
+                }
+            }
+        };
+
+        DOM.previewModalCanvasCutout.addEventListener('mousedown', prevStartPainting);
+        DOM.previewModalCanvasCutout.addEventListener('mousemove', prevPaint);
+        window.addEventListener('mouseup', prevStopPainting);
+        
+        DOM.previewModalCanvasCutout.addEventListener('touchstart', prevStartPainting, { passive: false });
+        DOM.previewModalCanvasCutout.addEventListener('touchmove', prevPaint, { passive: false });
+        window.addEventListener('touchend', prevStopPainting);
+    }
+
+    // Image Preview Modal Canvas Crop dragging and ratio selectors
+    if (DOM.previewModalCanvasCrop) {
+        const handleCropStart = (e) => {
+            state.isDraggingCrop = true;
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            state.cropDragStartMouse = { x: clientX, y: clientY };
+            state.cropDragStartCenter = { x: state.cropPercentX, y: state.cropPercentY };
+        };
+
+        const handleCropMove = (e) => {
+            if (!state.isDraggingCrop) return;
+            e.preventDefault();
+            
+            const canvas = DOM.previewModalCanvasCrop;
+            const rect = canvas.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            
+            const dx = clientX - state.cropDragStartMouse.x;
+            const dy = clientY - state.cropDragStartMouse.y;
+            
+            const pctDx = dx / rect.width;
+            const pctDy = dy / rect.height;
+            
+            state.cropPercentX = state.cropDragStartCenter.x + pctDx;
+            state.cropPercentY = state.cropDragStartCenter.y + pctDy;
+            
+            drawCropCanvas();
+        };
+
+        const handleCropEnd = () => {
+            state.isDraggingCrop = false;
+        };
+
+        DOM.previewModalCanvasCrop.addEventListener('mousedown', handleCropStart);
+        DOM.previewModalCanvasCrop.addEventListener('mousemove', handleCropMove);
+        window.addEventListener('mouseup', handleCropEnd);
+
+        DOM.previewModalCanvasCrop.addEventListener('touchstart', handleCropStart, { passive: false });
+        DOM.previewModalCanvasCrop.addEventListener('touchmove', handleCropMove, { passive: false });
+        window.addEventListener('touchend', handleCropEnd);
+    }
+
+    const selectCropRatio = (ratio, activeBtn) => {
+        state.cropRatio = ratio;
+        [DOM.btnCropFree, DOM.btnCrop1_1, DOM.btnCrop9_16, DOM.btnCrop16_9, DOM.btnCrop4_5].forEach(btn => {
+            if (btn) btn.classList.remove('active');
+        });
+        if (activeBtn) activeBtn.classList.add('active');
+        drawCropCanvas();
+    };
+
+    if (DOM.btnCropFree) DOM.btnCropFree.addEventListener('click', () => selectCropRatio('free', DOM.btnCropFree));
+    if (DOM.btnCrop1_1) DOM.btnCrop1_1.addEventListener('click', () => selectCropRatio('1-1', DOM.btnCrop1_1));
+    if (DOM.btnCrop9_16) DOM.btnCrop9_16.addEventListener('click', () => selectCropRatio('9-16', DOM.btnCrop9_16));
+    if (DOM.btnCrop16_9) DOM.btnCrop16_9.addEventListener('click', () => selectCropRatio('16-9', DOM.btnCrop16_9));
+    if (DOM.btnCrop4_5) DOM.btnCrop4_5.addEventListener('click', () => selectCropRatio('4-5', DOM.btnCrop4_5));
+
+    if (DOM.cropScaleSlider) {
+        DOM.cropScaleSlider.addEventListener('input', (e) => {
+            state.cropScale = parseFloat(e.target.value) / 100;
+            if (DOM.cropScaleVal) DOM.cropScaleVal.textContent = e.target.value + '%';
+            drawCropCanvas();
+        });
+    }
+
+    if (DOM.btnPrevCropApply) {
+        DOM.btnPrevCropApply.addEventListener('click', applyCrop);
+    }
 }
 
 // Image Preview Modal Functions
@@ -1324,7 +1668,33 @@ function openPreviewModal(index) {
     // Set up tabs
     DOM.tabPreviewOrig.classList.add('active');
     DOM.tabPreviewCutout.classList.remove('active');
+    DOM.tabPreviewCrop.classList.remove('active');
     
+    // Reset Crop parameters
+    state.cropRatio = 'free';
+    state.cropScale = 0.8;
+    state.cropPercentX = 0.5;
+    state.cropPercentY = 0.5;
+    if (DOM.cropScaleSlider) {
+        DOM.cropScaleSlider.value = 80;
+        DOM.cropScaleVal.textContent = '80%';
+    }
+    [DOM.btnCropFree, DOM.btnCrop1_1, DOM.btnCrop9_16, DOM.btnCrop16_9, DOM.btnCrop4_5].forEach(btn => {
+        if (btn) btn.classList.remove('active');
+    });
+    if (DOM.btnCropFree) DOM.btnCropFree.classList.add('active');
+
+    // Reset preview editor parameters
+    state.prevEditorTool = 'brush';
+    state.prevBrushSize = 30;
+    if (DOM.prevBrushSizeSlider) {
+        DOM.prevBrushSizeSlider.value = 30;
+        DOM.prevBrushSizeVal.textContent = '30px';
+    }
+    if (DOM.prevToolBrush) DOM.prevToolBrush.classList.add('active');
+    if (DOM.prevToolEraser) DOM.prevToolEraser.classList.remove('active');
+    if (DOM.prevBrushToolIndicator) DOM.prevBrushToolIndicator.textContent = "Mode: Brush (Reveal)";
+
     updatePreviewContent();
     
     // Add global event listeners for closing and navigation
@@ -1338,6 +1708,10 @@ function closePreviewModal() {
     }, 300);
     
     state.previewActiveIdx = null;
+    
+    // Hide controls
+    if (DOM.previewModalEditorControls) DOM.previewModalEditorControls.style.display = 'none';
+    if (DOM.previewModalCropControls) DOM.previewModalCropControls.style.display = 'none';
     
     // Remove global listeners
     document.removeEventListener('keydown', handlePreviewKeyDown);
@@ -1368,39 +1742,35 @@ function updatePreviewContent() {
         DOM.previewModalImgOrig.classList.add('active');
         DOM.previewModalCanvasCutout.style.display = 'none';
         DOM.previewModalCanvasCutout.classList.remove('active');
-    } else {
+        DOM.previewModalCanvasCrop.style.display = 'none';
+        DOM.previewModalCanvasCrop.classList.remove('active');
+        
+        if (DOM.previewModalEditorControls) DOM.previewModalEditorControls.style.display = 'none';
+        if (DOM.previewModalCropControls) DOM.previewModalCropControls.style.display = 'none';
+    } else if (state.previewTab === 'cutout') {
         DOM.previewImageContainer.classList.add('checkerboard');
         DOM.previewModalImgOrig.classList.remove('active');
         DOM.previewModalCanvasCutout.style.display = 'block';
         DOM.previewModalCanvasCutout.classList.add('active');
+        DOM.previewModalCanvasCrop.style.display = 'none';
+        DOM.previewModalCanvasCrop.classList.remove('active');
         
-        // Render cutout onto preview canvas
-        const canvas = DOM.previewModalCanvasCutout;
+        if (DOM.previewModalEditorControls) DOM.previewModalEditorControls.style.display = 'flex';
+        if (DOM.previewModalCropControls) DOM.previewModalCropControls.style.display = 'none';
         
-        // Ensure cutout exists (compile on the fly if needed)
-        if (!slide.cutout && slide.mask && renderer) {
-            slide.cutout = renderer.generateCutout(slide.img, slide.mask);
-        }
+        drawPreviewCutout();
+    } else if (state.previewTab === 'crop') {
+        DOM.previewImageContainer.classList.remove('checkerboard');
+        DOM.previewModalImgOrig.classList.remove('active');
+        DOM.previewModalCanvasCutout.style.display = 'none';
+        DOM.previewModalCanvasCutout.classList.remove('active');
+        DOM.previewModalCanvasCrop.style.display = 'block';
+        DOM.previewModalCanvasCrop.classList.add('active');
         
-        if (slide.cutout) {
-            canvas.width = slide.cutout.width;
-            canvas.height = slide.cutout.height;
-            const ctx = canvas.getContext('2d');
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.drawImage(slide.cutout, 0, 0);
-        } else {
-            // No cutout or mask yet, just clear and show empty or original
-            canvas.width = slide.img.naturalWidth || 600;
-            canvas.height = slide.img.naturalHeight || 400;
-            const ctx = canvas.getContext('2d');
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            // Put placeholder text
-            ctx.fillStyle = '#a5a5b5';
-            ctx.font = '20px Outfit';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText('Processing AI Cutout...', canvas.width / 2, canvas.height / 2);
-        }
+        if (DOM.previewModalEditorControls) DOM.previewModalEditorControls.style.display = 'none';
+        if (DOM.previewModalCropControls) DOM.previewModalCropControls.style.display = 'flex';
+        
+        drawCropCanvas();
     }
 }
 
@@ -1408,16 +1778,198 @@ function handlePreviewKeyDown(e) {
     if (e.key === 'Escape') {
         closePreviewModal();
     } else if (e.key === 'ArrowLeft') {
-        if (state.previewActiveIdx > 0) {
+        if (state.previewActiveIdx > 0 && state.previewTab !== 'crop' && !state.prevIsDrawing) {
             state.previewActiveIdx--;
             updatePreviewContent();
         }
     } else if (e.key === 'ArrowRight') {
-        if (state.previewActiveIdx < state.slides.length - 1) {
+        if (state.previewActiveIdx < state.slides.length - 1 && state.previewTab !== 'crop' && !state.prevIsDrawing) {
             state.previewActiveIdx++;
             updatePreviewContent();
         }
     }
+}
+
+// Draw transparent cutout onto preview modal canvas in real-time
+function drawPreviewCutout() {
+    const slide = state.slides[state.previewActiveIdx];
+    if (!slide) return;
+    const canvas = DOM.previewModalCanvasCutout;
+    
+    // Ensure mask matches image dimensions
+    if (slide.mask.width !== slide.img.naturalWidth || slide.mask.height !== slide.img.naturalHeight) {
+        const temp = document.createElement('canvas');
+        temp.width = slide.img.naturalWidth;
+        temp.height = slide.img.naturalHeight;
+        const tempCtx = temp.getContext('2d');
+        tempCtx.drawImage(slide.mask, 0, 0, temp.width, temp.height);
+        slide.mask = temp;
+    }
+
+    canvas.width = slide.img.naturalWidth || 600;
+    canvas.height = slide.img.naturalHeight || 400;
+    const ctx = canvas.getContext('2d');
+    
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = canvas.width;
+    tempCanvas.height = canvas.height;
+    const tCtx = tempCanvas.getContext('2d');
+    
+    tCtx.drawImage(slide.img, 0, 0);
+    tCtx.globalCompositeOperation = 'destination-in';
+    tCtx.drawImage(slide.mask, 0, 0);
+    
+    ctx.drawImage(tempCanvas, 0, 0);
+}
+
+// Draw crop screen onto preview-modal-canvas-crop
+function drawCropCanvas() {
+    const slide = state.slides[state.previewActiveIdx];
+    if (!slide) return;
+    const canvas = DOM.previewModalCanvasCrop;
+    const ctx = canvas.getContext('2d');
+    
+    const img = slide.img;
+    const iw = img.naturalWidth;
+    const ih = img.naturalHeight;
+    
+    canvas.width = iw;
+    canvas.height = ih;
+    
+    ctx.clearRect(0, 0, iw, ih);
+    ctx.drawImage(img, 0, 0);
+    
+    let cropW = iw * state.cropScale;
+    let cropH = ih * state.cropScale;
+    
+    if (state.cropRatio === '1-1') {
+        const size = Math.min(iw, ih) * state.cropScale;
+        cropW = size;
+        cropH = size;
+    } else if (state.cropRatio === '9-16') {
+        const maxW = Math.min(iw, ih * (9 / 16));
+        cropW = maxW * state.cropScale;
+        cropH = cropW * (16 / 9);
+    } else if (state.cropRatio === '16-9') {
+        const maxH = Math.min(ih, iw * (9 / 16));
+        cropH = maxH * state.cropScale;
+        cropW = cropH * (16 / 9);
+    } else if (state.cropRatio === '4-5') {
+        const maxW = Math.min(iw, ih * (4 / 5));
+        cropW = maxW * state.cropScale;
+        cropH = cropW * (5 / 4);
+    }
+    
+    if (cropW > iw) {
+        cropW = iw;
+        if (state.cropRatio === '1-1') cropH = cropW;
+        else if (state.cropRatio === '9-16') cropH = cropW * (16 / 9);
+        else if (state.cropRatio === '16-9') cropH = cropW * (9 / 16);
+        else if (state.cropRatio === '4-5') cropH = cropW * (5 / 4);
+    }
+    if (cropH > ih) {
+        cropH = ih;
+        if (state.cropRatio === '1-1') cropW = cropH;
+        else if (state.cropRatio === '9-16') cropW = cropH * (9 / 16);
+        else if (state.cropRatio === '16-9') cropW = cropH * (16 / 9);
+        else if (state.cropRatio === '4-5') cropW = cropH * (4 / 5);
+    }
+    
+    let cx = state.cropPercentX * iw;
+    let cy = state.cropPercentY * ih;
+    
+    cx = Math.max(cropW / 2, Math.min(iw - cropW / 2, cx));
+    cy = Math.max(cropH / 2, Math.min(ih - cropH / 2, cy));
+    
+    state.cropPercentX = cx / iw;
+    state.cropPercentY = cy / ih;
+    
+    const rx = cx - cropW / 2;
+    const ry = cy - cropH / 2;
+    
+    state.currentCropRect = { sx: rx, sy: ry, sw: cropW, sh: cropH };
+    
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
+    ctx.fillRect(0, 0, iw, ry);
+    ctx.fillRect(0, ry + cropH, iw, ih - (ry + cropH));
+    ctx.fillRect(0, ry, rx, cropH);
+    ctx.fillRect(rx + cropW, ry, iw - (rx + cropW), cropH);
+    
+    ctx.strokeStyle = '#9d4edd';
+    ctx.lineWidth = Math.max(3, iw / 250);
+    ctx.strokeRect(rx, ry, cropW, cropH);
+    
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+    ctx.lineWidth = Math.max(1, iw / 500);
+    ctx.beginPath();
+    ctx.moveTo(rx + cropW / 3, ry);
+    ctx.lineTo(rx + cropW / 3, ry + cropH);
+    ctx.moveTo(rx + (2 * cropW) / 3, ry);
+    ctx.lineTo(rx + (2 * cropW) / 3, ry + cropH);
+    ctx.moveTo(rx, ry + cropH / 3);
+    ctx.lineTo(rx + cropW, ry + cropH / 3);
+    ctx.moveTo(rx, ry + (2 * cropH) / 3);
+    ctx.lineTo(rx + cropW, ry + (2 * cropH) / 3);
+    ctx.stroke();
+}
+
+// Crop the image and mask canvas, regenerate cutout and save
+async function applyCrop() {
+    const slide = state.slides[state.previewActiveIdx];
+    if (!slide || !state.currentCropRect) return;
+    
+    const { sx, sy, sw, sh } = state.currentCropRect;
+    
+    // 1. Crop original image
+    const croppedImageCanvas = document.createElement('canvas');
+    croppedImageCanvas.width = sw;
+    croppedImageCanvas.height = sh;
+    const ciCtx = croppedImageCanvas.getContext('2d');
+    ciCtx.drawImage(slide.img, sx, sy, sw, sh, 0, 0, sw, sh);
+    
+    const croppedImg = new Image();
+    croppedImg.src = croppedImageCanvas.toDataURL();
+    await new Promise(resolve => croppedImg.onload = resolve);
+    
+    // 2. Crop mask canvas
+    const croppedMaskCanvas = document.createElement('canvas');
+    croppedMaskCanvas.width = sw;
+    croppedMaskCanvas.height = sh;
+    const cmCtx = croppedMaskCanvas.getContext('2d');
+    
+    // Ensure mask matches original image resolution before crop
+    if (slide.mask.width !== slide.img.naturalWidth || slide.mask.height !== slide.img.naturalHeight) {
+        const temp = document.createElement('canvas');
+        temp.width = slide.img.naturalWidth;
+        temp.height = slide.img.naturalHeight;
+        const tempCtx = temp.getContext('2d');
+        tempCtx.drawImage(slide.mask, 0, 0, temp.width, temp.height);
+        slide.mask = temp;
+    }
+    
+    cmCtx.drawImage(slide.mask, sx, sy, sw, sh, 0, 0, sw, sh);
+    
+    // 3. Update slide
+    slide.img = croppedImg;
+    slide.mask = croppedMaskCanvas;
+    
+    // 4. Regenerate cutout
+    slide.cutout = renderer.generateCutout(slide.img, slide.mask);
+    renderer.setSlides(state.slides);
+    
+    // 5. Save & refresh
+    triggerAutosave();
+    onPhotosUpdated();
+    
+    // Switch back to original view tab
+    state.previewTab = 'orig';
+    DOM.tabPreviewOrig.classList.add('active');
+    DOM.tabPreviewCrop.classList.remove('active');
+    DOM.tabPreviewCutout.classList.remove('active');
+    
+    updatePreviewContent();
 }
 
 // Wizard Step Navigation Routing
