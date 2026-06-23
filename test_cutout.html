@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Cutout Engine Test — 19.jpeg</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            background: #111;
+            color: #eee;
+            font-family: monospace;
+            padding: 20px;
+        }
+        h1 { font-size: 18px; margin-bottom: 20px; color: #9d4edd; }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+            gap: 20px;
+        }
+        .card {
+            background: #1e1e2e;
+            border: 1px solid #333;
+            border-radius: 12px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .card h2 { font-size: 13px; color: #ccc; }
+        .card .status {
+            font-size: 11px;
+            padding: 4px 8px;
+            border-radius: 6px;
+            display: inline-block;
+        }
+        .status.running { background: rgba(255,200,0,0.15); color: #ffc800; }
+        .status.ok      { background: rgba(6,214,160,0.15); color: #06d6a0; }
+        .status.fail    { background: rgba(239,71,111,0.15); color: #ef476f; }
+        .status.waiting { background: rgba(150,150,150,0.1); color: #888; }
+        .canvas-row {
+            display: flex;
+            gap: 10px;
+            align-items: flex-start;
+        }
+        .canvas-wrap {
+            flex: 1;
+        }
+        .canvas-wrap label {
+            font-size: 10px;
+            color: #666;
+            display: block;
+            margin-bottom: 4px;
+        }
+        canvas {
+            width: 100%;
+            border-radius: 8px;
+            background: repeating-conic-gradient(#2a2a2a 0% 25%, #1a1a1a 0% 50%) 0 0 / 16px 16px;
+        }
+        .log {
+            font-size: 10px;
+            color: #666;
+            background: #0a0a0a;
+            padding: 8px;
+            border-radius: 6px;
+            max-height: 100px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+        #source-img { display: none; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Cutout Engine Test — iterating until output is perfect</h1>
+    <img id="source-img" src="19.jpeg" crossorigin="anonymous">
+    <div class="grid" id="grid"></div>
+
+<script type="module">
+
+// ─── Helpers ────────────────────────────────────────────────────────────────
+
+function makeCard(title) {
+    const card = document.createElement('div');
+    card.className = 'card';
+
+    const h2     = document.createElement('h2');
+    const status = document.createElement('div');
+    const row    = document.createElement('div');
+    const log    = document.createElement('div');
+
+    h2.textContent    = title;
+    status.className  = 'status waiting';
+    status.textContent = '⏳ Waiting...';
+    row.className = 'canvas-row';
+    log.className = 'log';
+    log.textContent = '';
+
+    card.append(h2, status, row, log);
+    document.getElementById('grid').appendChild(card);
+
+    return {
+        setStatus(cls, txt) { status.className = 'status ' + cls; status.textContent = txt; },
+        addLog(msg)         { log.textContent += msg + '\n'; log.scrollTop = 9999; },
+        addCanvas(label, canvas) {
+            const wrap = document.createElement('div');
+            wrap.className = 'canvas-wrap';
+            const lbl = document.createElement('label');
+            lbl.textContent = label;
+            wrap.append(lbl, canvas);
+            row.appendChild(wrap);
+        }
+    };
+}
+
+function canvasFromImage(img) {
+    const c = document.createElement('canvas');
+    c.width = img.naturalWidth; c.height = img.naturalHeight;
+    c.getContext('2d').drawImage(img, 0, 0);
+    return c;
+}
+
+function canvasToBlob(canvas, type = 'image/png') {
+    return new Promise((res, rej) => canvas.toBlob(b => b ? res(b) : rej(new Error('toBlob failed')), type));
+}
+
+function blobToCanvas(blob) {
+    return new Promise((res, rej) => {
+        const url = URL.createObjectURL(blob);
+        const img = new Image();
+        img.onload = () => {
+            URL.revokeObjectURL(url);
+            const c = document.createElement('canvas');
+            c.width = img.naturalWidth; c.height = img.naturalHeight;
+            c.getContext('2d').drawImage(img, 0, 0);
+            res(c);
+        };
+        img.onerror = rej;
+        img.src = url;
+    });
+}
+
+function scaleCanvas(c, maxW = 300, maxH = 300) {
+    const scale = Math.min(maxW / c.width, maxH / c.height, 1);
+    const out = document.createElement('canvas');
+    out.width = Math.round(c.width * scale);
+    out.height = Math.round(c.height * scale);
+    out.getContext('2d').drawImage(c, 0, 0, out.width, out.height);
+    return out;
+}
+
+async function waitForImage(img) {
+    if (img.complete && img.naturalWidth) return;
+    return new Promise((res, rej) => { img.onload = res; img.onerror = rej; });
+}
+
+// ─── Test 1: @imgly/background-removal v1.5.2 via ESM import ────────────────
+async function test_imgly_esm(sourceImg) {
+    const card = makeCard('① @imgly/background-removal v1.5.2 (ESM import)');
+    card.setStatus('running', '🔄 Loading...');
+    card.addLog('Importing ESM module from jsDelivr...');
+
+    try {
+        const t0 = Date.now();
+        // Use a proper esm.sh transpile URL which correctly handles the ESM interop
+        const { removeBackground } = await import('https://esm.sh/@imgly/background-removal@1.5.2?bundle');
+        card.addLog(`Module loaded in ${Date.now() - t0}ms. Running inference...`);
+
+        const srcCanvas = canvasFromImage(sourceImg);
+        const blob      = await canvasToBlob(srcCanvas);
+        const t1 = Date.now();
+        const resultBlob = await removeBackground(blob, {
+            model: 'medium',
+            output: { format: 'image/png', quality: 1.0 },
+        });
+        card.addLog(`Inference done in ${Date.now() - t1}ms. Result: ${resultBlob.size} bytes`);
+
+        const resultCanvas = await blobToCanvas(resultBlob);
+        card.addCanvas('Original', scaleCanvas(srcCanvas, 160, 300));
+        card.addCanvas('Cutout (AI)', scaleCanvas(resultCanvas, 160, 300));
+        card.setStatus('ok', '✅ Success!');
+        card.addLog('ESM import method WORKS ✓');
+    } catch (e) {
+        card.setStatus('fail', '❌ Failed');
+        card.addLog('Error: ' + e.message);
+        console.error('test_imgly_esm error:', e);
+    }
+}
+
+// ─── Test 2: @imgly/background-removal — jsdelivr ESM (no bundle flag) ──────
+async function test_imgly_jsdelivr(sourceImg) {
+    const card = makeCard('② @imgly/background-removal (jsdelivr ESM direct)');
+    card.setStatus('running', '🔄 Loading...');
+    card.addLog('Importing from jsDelivr ESM directly...');
+
+    try {
+        const t0 = Date.now();
+        const mod = await import('https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.5.2/dist/index.mjs');
+        card.addLog(`Module loaded in ${Date.now() - t0}ms`);
+        card.addLog('Exported keys: ' + Object.keys(mod).join(', '));
+
+        const removeBackground = mod.removeBackground || mod.default?.removeBackground || mod.default;
+        if (typeof removeBackground !== 'function') throw new Error('removeBackground not a function: ' + typeof removeBackground);
+
+        const srcCanvas = canvasFromImage(sourceImg);
+        const blob = await canvasToBlob(srcCanvas);
+        const t1 = Date.now();
+        const resultBlob = await removeBackground(blob, {
+            model: 'medium',
+            output: { format: 'image/png', quality: 1.0 },
+        });
+        card.addLog(`Done in ${Date.now() - t1}ms. Result: ${resultBlob.size} bytes`);
+        const resultCanvas = await blobToCanvas(resultBlob);
+        card.addCanvas('Original', scaleCanvas(canvasFromImage(sourceImg), 160, 300));
+        card.addCanvas('Cutout (AI)', scaleCanvas(resultCanvas, 160, 300));
+        card.setStatus('ok', '✅ Success!');
+    } catch(e) {
+        card.setStatus('fail', '❌ Failed');
+        card.addLog('Error: ' + e.message);
+        console.error('test_imgly_jsdelivr error:', e);
+    }
+}
+
+// ─── Test 3: @tensorflow-models/body-segmentation (MediaPipe Selfie) ─────────
+async function test_mediapipe(sourceImg) {
+    const card = makeCard('③ MediaPipe SelfieSegmentation (TF.js)');
+    card.setStatus('running', '🔄 Loading TF.js + MediaPipe...');
+
+    try {
+        // Load TF.js and the MediaPipe selfie model via script injection
+        await loadScript('https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js');
+        await loadScript('https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation@0.1.1675465747/selfie_segmentation.js');
+        card.addLog('Scripts loaded');
+
+        const seg = new SelfieSegmentation({ locateFile: (f) =>
+            `https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation@0.1.1675465747/${f}`
+        });
+        seg.setOptions({ modelSelection: 1 }); // 1 = landscape model (better for general subjects)
+
+        // Create a thumbnail for the segmenter (it expects a certain aspect)
+        const thumb = scaleCanvas(canvasFromImage(sourceImg), 640, 640);
+
+        const resultCanvas = await new Promise((res, rej) => {
+            seg.onResults((results) => {
+                const out = document.createElement('canvas');
+                out.width = thumb.width; out.height = thumb.height;
+                const ctx = out.getContext('2d');
+                // Draw the segmentation mask
+                ctx.drawImage(results.segmentationMask, 0, 0, out.width, out.height);
+                // Use it as an alpha mask
+                const maskData = ctx.getImageData(0, 0, out.width, out.height);
+                ctx.drawImage(thumb, 0, 0);
+                const imgData = ctx.getImageData(0, 0, out.width, out.height);
+                for (let i = 0; i < maskData.data.length; i += 4) {
+                    imgData.data[i + 3] = maskData.data[i]; // use red channel as alpha
+                }
+                ctx.putImageData(imgData, 0, 0);
+                res(out);
+            });
+            seg.send({ image: thumb }).catch(rej);
+        });
+
+        card.addCanvas('Original', scaleCanvas(canvasFromImage(sourceImg), 160, 300));
+        card.addCanvas('Cutout (MediaPipe)', scaleCanvas(resultCanvas, 160, 300));
+        card.setStatus('ok', '✅ Success!');
+        card.addLog('MediaPipe method WORKS ✓');
+    } catch(e) {
+        card.setStatus('fail', '❌ Failed');
+        card.addLog('Error: ' + e.message);
+        console.error('test_mediapipe error:', e);
+    }
+}
+
+// ─── Test 4: remove.bg API (cloud, best quality) ─────────────────────────────
+async function test_removebg(sourceImg) {
+    const card = makeCard('④ remove.bg Cloud API (best quality, needs API key)');
+    card.setStatus('fail', '⚠️ Needs API key');
+    card.addLog('Skipped — requires a free remove.bg API key.\nSign up at remove.bg → get 50 free images/month.\nBest quality of all options if you want to use it.');
+}
+
+// ─── Script loader ────────────────────────────────────────────────────────────
+function loadScript(src) {
+    return new Promise((res, rej) => {
+        if (document.querySelector(`script[src="${src}"]`)) { res(); return; }
+        const s = document.createElement('script');
+        s.src = src; s.onload = res; s.onerror = rej;
+        document.head.appendChild(s);
+    });
+}
+
+// ─── Run all tests ────────────────────────────────────────────────────────────
+const sourceImg = document.getElementById('source-img');
+await waitForImage(sourceImg);
+
+// Run tests in parallel
+await Promise.allSettled([
+    test_imgly_esm(sourceImg),
+    test_imgly_jsdelivr(sourceImg),
+    test_mediapipe(sourceImg),
+    test_removebg(sourceImg),
+]);
+
+</script>
+</body>
+</html>

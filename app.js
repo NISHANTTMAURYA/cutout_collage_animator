@@ -1,0 +1,2074 @@
+import { detectSubject, smoothMask, setModelStatusCallback, loadModel } from './saliency.js';
+import { AudioEngine } from './audio.js';
+import { CollageRenderer } from './renderer.js';
+import {
+    openDb,
+    getProjects,
+    saveProject,
+    getProject,
+    deleteProject,
+    getSlides,
+    saveSlides
+} from './db.js';
+
+// Application State
+const state = {
+    activeProjectId: null,
+    isSaving: false,
+    isLoadingProject: false,
+    slides: [],         // Array of { id, img, mask, cutout, text }
+    activeSlideIdx: 0,
+    currentStep: 1,
+    isPlaying: false,
+    playTime: 0,
+    isRecording: false,
+    
+    // Customize Settings
+    style: 'clean',
+    borderType: 'none',
+    bgPalette: 'dark',
+    slideDuration: 1.5,
+    beatSync: true,
+    musicTheme: 'lofi',
+    
+    // Editor State
+    editorTool: 'brush', // 'brush', 'eraser', 'lasso'
+    brushSize: 30,
+    featherRadius: 4,
+    autoSensitivity: 40,
+    isDrawing: false,
+    
+    // Lasso (N-point polygon) state
+    lassoPoints: [],         // [{x, y}] in canvas display coords
+    lassoActive: false,      // lasso session in progress
+    lassoMousePos: null,     // current mouse pos for live preview
+    
+    // Recording
+    recorder: null,
+    recordedChunks: [],
+    
+    // Image Preview Modal State
+    previewActiveIdx: null,
+    previewTab: 'orig',
+    prevEditorTool: 'brush', // 'brush', 'eraser'
+    prevBrushSize: 30,
+    prevIsDrawing: false,
+    prevLastX: undefined,
+    prevLastY: undefined,
+    
+    // Preview Crop State
+    cropRatio: 'free', // 'free', '1-1', '9-16', '16-9', '4-5'
+    cropScale: 0.8,
+    cropPercentX: 0.5, // Center X of crop box (0 to 1)
+    cropPercentY: 0.5, // Center Y of crop box (0 to 1)
+    isDraggingCrop: false,
+    cropDragStartMouse: null,
+    cropDragStartCenter: null,
+
+    // Timing Settings
+    cutoutHoldRatio: 0.35,
+
+    // Custom Audio Settings
+    customAudioStart: 0.0,
+    customAudioEnd: null,
+    musicVolume: 0.8,
+    customAudioFileBlob: null,
+    customAudioFilename: ''
+};
+
+// Instantiate Modules
+const audio = new AudioEngine();
+let renderer = null;
+
+// HTML Elements
+const DOM = {
+    // Nav steps
+    stepBtns: document.querySelectorAll('.step-btn'),
+    stepPanels: document.querySelectorAll('.step-panel'),
+    
+    // Step 1: Upload
+    dropZone: document.getElementById('drop-zone'),
+    fileInput: document.getElementById('file-input'),
+    uploadedSection: document.getElementById('uploaded-section'),
+    photoGrid: document.getElementById('photo-grid'),
+    photoCount: document.getElementById('photo-count'),
+    clearAll: document.getElementById('clear-all-photos'),
+    toStep2: document.getElementById('to-step-2'),
+    
+    // Step 2: Cutout Editor
+    editorPhotoSelect: document.getElementById('editor-photo-select'),
+    editorCanvas: document.getElementById('editor-canvas'),
+    editorLoader: document.getElementById('editor-loader'),
+    toolBrush: document.getElementById('tool-brush'),
+    toolEraser: document.getElementById('tool-eraser'),
+    toolMagic: document.getElementById('tool-magic'),
+    toolClear: document.getElementById('tool-clear'),
+    brushSizeSlider: document.getElementById('brush-size'),
+    brushSizeVal: document.getElementById('brush-size-val'),
+    autoSensSlider: document.getElementById('auto-sens'),
+    autoSensVal: document.getElementById('auto-sens-val'),
+    toStep3: document.getElementById('to-step-3'),
+    backTo1: document.getElementById('back-to-1'),
+    
+    // Step 3: Customize
+    styleCards: document.querySelectorAll('.style-card'),
+    musicSelect: document.getElementById('music-track-select'),
+    customAudioInput: document.getElementById('custom-audio-input'),
+    beatSyncCheckbox: document.getElementById('beat-sync'),
+    slideDurationSlider: document.getElementById('slide-duration'),
+    slideDurVal: document.getElementById('slide-dur-val'),
+    cutoutBorderSelect: document.getElementById('cutout-border-type'),
+    bgStyleSelect: document.getElementById('bg-style'),
+    captionsContainer: document.getElementById('captions-container'),
+    toStep4: document.getElementById('to-step-4'),
+    backTo2: document.getElementById('back-to-2'),
+    
+    // Step 4: Export
+    exportResolution: document.getElementById('export-resolution'),
+    exportFormat: document.getElementById('export-format'),
+    exportProgressArea: document.getElementById('export-progress-area'),
+    exportProgressBar: document.getElementById('export-progress-bar'),
+    exportStatusText: document.getElementById('export-status-text'),
+    exportPercent: document.getElementById('export-percent'),
+    btnStartExport: document.getElementById('btn-start-export'),
+    btnCancelExport: document.getElementById('btn-cancel-export'),
+    btnDownloadVideo: document.getElementById('btn-download-video'),
+    backTo3: document.getElementById('back-to-3'),
+    
+    // AI Badge
+    aiBadge: document.getElementById('ai-badge'),
+
+    // Projects
+    projectSelect: document.getElementById('project-select'),
+    btnNewProject: document.getElementById('btn-new-project'),
+    btnRenameProject: document.getElementById('btn-rename-project'),
+    btnDeleteProject: document.getElementById('btn-delete-project'),
+
+    // Preview Panel
+    previewCanvas: document.getElementById('preview-canvas'),
+    hudStyleTag: document.getElementById('hud-style-tag'),
+    hudCounter: document.getElementById('hud-counter'),
+    hudPlayBtn: document.getElementById('hud-play-btn'),
+    hudProgressFill: document.getElementById('hud-progress-fill'),
+    hudTimeVal: document.getElementById('hud-time-val'),
+    musicIndicator: document.getElementById('music-indicator'),
+
+    // Image Preview Modal
+    previewModal: document.getElementById('preview-modal'),
+    previewModalOverlay: document.getElementById('preview-modal-overlay'),
+    previewModalClose: document.getElementById('preview-modal-close'),
+    tabPreviewOrig: document.getElementById('tab-preview-orig'),
+    tabPreviewCutout: document.getElementById('tab-preview-cutout'),
+    tabPreviewCrop: document.getElementById('tab-preview-crop'),
+    btnPreviewPrev: document.getElementById('btn-preview-prev'),
+    btnPreviewNext: document.getElementById('btn-preview-next'),
+    previewModalImgOrig: document.getElementById('preview-modal-img-orig'),
+    previewModalCanvasCutout: document.getElementById('preview-modal-canvas-cutout'),
+    previewModalCanvasCrop: document.getElementById('preview-modal-canvas-crop'),
+    previewImageContainer: document.querySelector('.preview-image-container'),
+    previewModalCounter: document.getElementById('preview-modal-counter'),
+    previewModalCaption: document.getElementById('preview-modal-caption'),
+    
+    // Preview modal cutout editor selectors
+    previewModalEditorControls: document.getElementById('preview-modal-editor-controls'),
+    prevToolBrush: document.getElementById('prev-tool-brush'),
+    prevToolEraser: document.getElementById('prev-tool-eraser'),
+    prevToolMagic: document.getElementById('prev-tool-magic'),
+    prevToolClear: document.getElementById('prev-tool-clear'),
+    prevBrushSizeSlider: document.getElementById('prev-brush-size'),
+    prevBrushSizeVal: document.getElementById('prev-brush-size-val'),
+    prevBrushToolIndicator: document.getElementById('prev-brush-tool-indicator'),
+    
+    // Preview modal crop selectors
+    previewModalCropControls: document.getElementById('preview-modal-crop-controls'),
+    btnPrevCropApply: document.getElementById('btn-prev-crop-apply'),
+    btnCropFree: document.getElementById('btn-crop-free'),
+    btnCrop1_1: document.getElementById('btn-crop-1-1'),
+    btnCrop9_16: document.getElementById('btn-crop-9-16'),
+    btnCrop16_9: document.getElementById('btn-crop-16-9'),
+    btnCrop4_5: document.getElementById('btn-crop-4-5'),
+    cropScaleSlider: document.getElementById('crop-scale-slider'),
+    cropScaleVal: document.getElementById('crop-scale-val'),
+    
+    // HUD Timeline seek controllers
+    hudProgressBar: document.getElementById('hud-progress-bar'),
+    hudRewindBtn: document.getElementById('hud-rewind-btn'),
+    hudForwardBtn: document.getElementById('hud-forward-btn'),
+
+    // Timing Settings
+    cutoutHoldSlider: document.getElementById('cutout-hold'),
+    cutoutHoldVal: document.getElementById('cutout-hold-val'),
+
+    // Custom Audio Editor
+    customAudioEditor: document.getElementById('custom-audio-editor'),
+    audioFilenameBadge: document.getElementById('audio-filename-badge'),
+    musicVolumeSlider: document.getElementById('music-volume-slider'),
+    musicVolumeVal: document.getElementById('music-volume-val'),
+    musicVolumeContainer: document.getElementById('music-volume-container'),
+    audioStartSlider: document.getElementById('audio-start-slider'),
+    audioStartVal: document.getElementById('audio-start-val'),
+    audioEndSlider: document.getElementById('audio-end-slider'),
+    audioEndVal: document.getElementById('audio-end-val'),
+
+    // Timing Settings Info Banner & Triggers
+    timingInfoBox: document.getElementById('timing-info-box'),
+    timingInfoClose: document.getElementById('timing-info-close'),
+    timingInfoTitle: document.getElementById('timing-info-title'),
+    timingInfoDesc: document.getElementById('timing-info-desc'),
+    infoBtnDuration: document.getElementById('info-btn-duration'),
+    infoBtnHold: document.getElementById('info-btn-hold')
+};
+
+// Canvas context for manual cutout editor
+let edCtx = null;
+let edImage = null; // Currently editing Image object
+
+// Page Load Initialization
+window.addEventListener('DOMContentLoaded', () => {
+    // Initialize Renderer
+    renderer = new CollageRenderer(DOM.previewCanvas);
+    edCtx = DOM.editorCanvas.getContext('2d');
+    
+    // Setup Accordions
+    setupAccordions();
+    
+    // Setup Event Listeners
+    setupEventListeners();
+    
+    // Hook up AI model status → badge updates
+    setModelStatusCallback((status) => {
+        const badge = DOM.aiBadge;
+        badge.className = 'ai-badge';
+        if (status === 'loading') {
+            badge.classList.add('badge-loading');
+            badge.textContent = 'AI Loading...';
+        } else if (status === 'ready') {
+            badge.classList.add('badge-ready');
+            badge.textContent = '✓ AI Ready';
+        } else if (status === 'error') {
+            badge.classList.add('badge-error');
+            badge.textContent = 'AI (Heuristic)';
+            badge.title = 'Could not load AI model. Using fast heuristic fallback.';
+        }
+    });
+    
+    // Initialize local database and projects list
+    initProjects().catch(err => console.error('[app] Initialization failed:', err));
+    
+    // Start Canvas animation tick
+    requestAnimationFrame(animationTick);
+});
+
+// Setup simple Accordion toggle logic
+function setupAccordions() {
+    document.querySelectorAll('.accordion-header').forEach(header => {
+        header.addEventListener('click', () => {
+            const item = header.parentElement;
+            const isExpanded = item.classList.contains('expanded');
+            
+            // Collapse all
+            document.querySelectorAll('.accordion-item').forEach(i => i.classList.remove('expanded'));
+            
+            // Expand clicked if not already expanded
+            if (!isExpanded) {
+                item.classList.add('expanded');
+            }
+        });
+    });
+}
+
+// Generate procedurally styled placeholder photos
+function loadMockImages() {
+    const mockTypes = ['mountain', 'pet', 'friend', 'cafe', 'sunflower'];
+    const mockCaptions = ['Mountain Peak', 'My Buddy', 'Chill Vibes', 'Cozy Café', 'Summer Glow'];
+    
+    let loadedCount = 0;
+    
+    // Warm up the AI model in background while mock images are generated
+    // so it's ready by the time users upload their own photos.
+    loadModel().catch(() => {}); // Errors are handled internally with fallback
+
+    mockTypes.forEach((type, idx) => {
+        const mockCanvas = document.createElement('canvas');
+        mockCanvas.width = 600;
+        mockCanvas.height = 600;
+        const ctx = mockCanvas.getContext('2d');
+        
+        // Background Gradient
+        const grad = ctx.createLinearGradient(0, 0, 600, 600);
+        if (type === 'mountain') {
+            grad.addColorStop(0, '#ff7e5f');
+            grad.addColorStop(1, '#feb47b');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, 600, 600);
+            
+            // Silhouette: Mountain
+            ctx.fillStyle = '#2c3e50';
+            ctx.beginPath();
+            ctx.moveTo(100, 480);
+            ctx.lineTo(300, 160);
+            ctx.lineTo(500, 480);
+            ctx.closePath();
+            ctx.fill();
+        } 
+        else if (type === 'pet') {
+            grad.addColorStop(0, '#654ea3');
+            grad.addColorStop(1, '#eaafc8');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, 600, 600);
+            
+            // Silhouette: Cute Cat
+            ctx.fillStyle = '#1e0b36';
+            ctx.beginPath();
+            // Cat body
+            ctx.arc(300, 380, 120, 0, Math.PI * 2);
+            ctx.fill();
+            // Head
+            ctx.beginPath();
+            ctx.arc(300, 240, 80, 0, Math.PI * 2);
+            ctx.fill();
+            // Ears
+            ctx.beginPath();
+            ctx.moveTo(230, 200);
+            ctx.lineTo(210, 110);
+            ctx.lineTo(280, 180);
+            ctx.closePath();
+            ctx.fill();
+            ctx.beginPath();
+            ctx.moveTo(370, 200);
+            ctx.lineTo(390, 110);
+            ctx.lineTo(320, 180);
+            ctx.closePath();
+            ctx.fill();
+        } 
+        else if (type === 'friend') {
+            grad.addColorStop(0, '#11998e');
+            grad.addColorStop(1, '#38ef7d');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, 600, 600);
+            
+            // Silhouette: Person jumping
+            ctx.fillStyle = '#0b4f3b';
+            ctx.beginPath();
+            // Head
+            ctx.arc(300, 200, 35, 0, Math.PI * 2);
+            // Body
+            ctx.moveTo(300, 235);
+            ctx.lineTo(300, 380);
+            // Arms
+            ctx.moveTo(300, 260);
+            ctx.lineTo(210, 180);
+            ctx.moveTo(300, 260);
+            ctx.lineTo(390, 180);
+            // Legs
+            ctx.moveTo(300, 380);
+            ctx.lineTo(240, 480);
+            ctx.moveTo(300, 380);
+            ctx.lineTo(360, 480);
+            ctx.lineWidth = 24;
+            ctx.lineCap = 'round';
+            ctx.stroke();
+        } 
+        else if (type === 'cafe') {
+            grad.addColorStop(0, '#e65c00');
+            grad.addColorStop(1, '#F9D423');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, 600, 600);
+            
+            // Silhouette: Coffee Cup
+            ctx.fillStyle = '#4a2306';
+            ctx.beginPath();
+            ctx.roundRect(200, 280, 200, 160, [0, 0, 80, 80]);
+            ctx.fill();
+            // Handle
+            ctx.strokeStyle = '#4a2306';
+            ctx.lineWidth = 20;
+            ctx.beginPath();
+            ctx.arc(400, 350, 40, -Math.PI/2, Math.PI/2);
+            ctx.stroke();
+            // Steam
+            ctx.beginPath();
+            ctx.moveTo(250, 250);
+            ctx.bezierCurveTo(240, 200, 270, 200, 260, 150);
+            ctx.moveTo(300, 250);
+            ctx.bezierCurveTo(290, 200, 320, 200, 310, 150);
+            ctx.lineWidth = 8;
+            ctx.lineCap = 'round';
+            ctx.stroke();
+        } 
+        else if (type === 'sunflower') {
+            grad.addColorStop(0, '#833ab4');
+            grad.addColorStop(1, '#fd1d1d');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, 600, 600);
+            
+            // Silhouette: Sunflower
+            ctx.fillStyle = '#fdbb2d';
+            const numPetals = 12;
+            ctx.save();
+            ctx.translate(300, 300);
+            for (let i = 0; i < numPetals; i++) {
+                ctx.rotate(Math.PI * 2 / numPetals);
+                ctx.beginPath();
+                ctx.ellipse(120, 0, 60, 25, 0, 0, Math.PI*2);
+                ctx.fill();
+            }
+            // Flower Center
+            ctx.fillStyle = '#3e1700';
+            ctx.beginPath();
+            ctx.arc(0, 0, 75, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        }
+        
+        const dataUrl = mockCanvas.toDataURL();
+        const img = new Image();
+        img.onload = () => {
+            detectSubject(img, 0.4).then(mask => {
+                state.slides.push({
+                    id: 'mock-' + type,
+                    img: img,
+                    mask: mask,
+                    cutout: null, // will be generated by renderer
+                    text: mockCaptions[idx],
+                    rotation: (Math.random() - 0.5) * 8 * Math.PI / 180 // Random -4 to +4 degrees
+                });
+                
+                loadedCount++;
+                if (loadedCount === mockTypes.length) {
+                    onPhotosUpdated();
+                    enableNextSteps();
+                }
+            });
+        };
+        img.src = dataUrl;
+    });
+}
+
+// ─── Database Helpers & Project Serialization ──────────────────────────────────
+
+function canvasFromImage(img) {
+    const c = document.createElement('canvas');
+    c.width = img.naturalWidth || img.width;
+    c.height = img.naturalHeight || img.height;
+    c.getContext('2d').drawImage(img, 0, 0);
+    return c;
+}
+
+function canvasToBlob(canvas, type = 'image/png') {
+    return new Promise((resolve) => {
+        canvas.toBlob((blob) => resolve(blob), type);
+    });
+}
+
+function imageToBlob(img) {
+    return new Promise((resolve) => {
+        const c = canvasFromImage(img);
+        c.toBlob((blob) => resolve(blob), 'image/png');
+    });
+}
+
+function blobToImage(blob) {
+    return new Promise((resolve, reject) => {
+        const url = URL.createObjectURL(blob);
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = (e) => reject(e);
+        img.src = url;
+    });
+}
+
+async function blobToCanvas(blob) {
+    const img = await blobToImage(blob);
+    const canvas = document.createElement('canvas');
+    canvas.width = img.naturalWidth;
+    canvas.height = img.naturalHeight;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0);
+    return canvas;
+}
+
+let autosaveTimeout = null;
+function triggerAutosave() {
+    if (state.isLoadingProject || !state.activeProjectId) return;
+    if (autosaveTimeout) clearTimeout(autosaveTimeout);
+    autosaveTimeout = setTimeout(async () => {
+        await saveCurrentProjectToDb();
+    }, 1000); // debounce by 1 second
+}
+
+async function saveCurrentProjectToDb() {
+    if (!state.activeProjectId) return;
+    state.isSaving = true;
+
+    try {
+        const projectRecord = {
+            id: state.activeProjectId,
+            name: DOM.projectSelect.options[DOM.projectSelect.selectedIndex]?.text || 'Untitled Project',
+            audioBlob: state.customAudioFileBlob || null,
+            audioFilename: state.customAudioFilename || '',
+            settings: {
+                style: state.style,
+                borderType: state.borderType,
+                bgPalette: state.bgPalette,
+                slideDuration: state.slideDuration,
+                beatSync: state.beatSync,
+                musicTheme: state.musicTheme,
+                cutoutHoldRatio: state.cutoutHoldRatio,
+                customAudioStart: state.customAudioStart,
+                customAudioEnd: state.customAudioEnd,
+                musicVolume: state.musicVolume
+            }
+        };
+        await saveProject(projectRecord);
+
+        const serializedSlides = [];
+        for (const slide of state.slides) {
+            let imgBlob;
+            if (slide.img.src.startsWith('blob:') || slide.img.src.startsWith('data:')) {
+                const resp = await fetch(slide.img.src);
+                imgBlob = await resp.blob();
+            } else {
+                imgBlob = await imageToBlob(slide.img);
+            }
+
+            const maskBlob = await canvasToBlob(slide.mask);
+
+            serializedSlides.push({
+                id: slide.id,
+                imgBlob,
+                maskBlob,
+                text: slide.text,
+                rotation: slide.rotation
+            });
+        }
+
+        await saveSlides(state.activeProjectId, serializedSlides);
+        console.info('[app] Project autosaved ✓');
+    } catch (e) {
+        console.error('[app] Autosave failed:', e);
+    } finally {
+        state.isSaving = false;
+    }
+}
+
+async function loadProject(projectId) {
+    if (typeof closePreviewModal === 'function' && state.previewActiveIdx !== null) {
+        closePreviewModal();
+    }
+    state.isLoadingProject = true;
+    const project = await getProject(projectId);
+    if (!project) {
+        state.isLoadingProject = false;
+        return;
+    }
+
+    state.activeProjectId = projectId;
+
+    if (project.settings) {
+        state.style = project.settings.style || 'clean';
+        state.borderType = project.settings.borderType || 'none';
+        state.bgPalette = project.settings.bgPalette || 'dark';
+        state.slideDuration = project.settings.slideDuration || 1.5;
+        state.beatSync = project.settings.beatSync !== false;
+        state.musicTheme = project.settings.musicTheme || 'lofi';
+        state.cutoutHoldRatio = project.settings.cutoutHoldRatio || 0.35;
+        state.customAudioStart = project.settings.customAudioStart || 0.0;
+        state.customAudioEnd = project.settings.customAudioEnd || null;
+        state.musicVolume = project.settings.musicVolume !== undefined ? project.settings.musicVolume : 0.8;
+
+        // Apply volume to AudioEngine immediately on project load (tracks volume state internally)
+        audio.setVolume(state.musicVolume);
+
+        if (DOM.slideDurationSlider) {
+            DOM.slideDurationSlider.value = state.slideDuration;
+            DOM.slideDurVal.textContent = state.slideDuration + 's';
+        }
+        if (DOM.cutoutHoldSlider) {
+            DOM.cutoutHoldSlider.value = Math.round(state.cutoutHoldRatio * 100);
+            DOM.cutoutHoldVal.textContent = Math.round(state.cutoutHoldRatio * 100) + '%';
+        }
+        if (DOM.musicSelect) {
+            DOM.musicSelect.value = state.musicTheme;
+        }
+        if (DOM.musicVolumeSlider) {
+            DOM.musicVolumeSlider.value = Math.round(state.musicVolume * 100);
+            DOM.musicVolumeVal.textContent = Math.round(state.musicVolume * 100) + '%';
+        }
+        if (DOM.musicVolumeContainer) {
+            DOM.musicVolumeContainer.style.display = state.musicTheme === 'none' ? 'none' : 'block';
+        }
+        if (DOM.beatSyncCheckbox) {
+            DOM.beatSyncCheckbox.checked = state.beatSync;
+        }
+        if (DOM.cutoutBorderSelect) {
+            DOM.cutoutBorderSelect.value = state.borderType;
+        }
+        if (DOM.bgStyleSelect) {
+            DOM.bgStyleSelect.value = state.bgPalette;
+        }
+
+        if (renderer) {
+            renderer.slideDuration = state.slideDuration;
+            renderer.cutoutHoldRatio = state.cutoutHoldRatio;
+            renderer.beatSync = state.beatSync;
+            renderer.bgPalette = state.bgPalette;
+            renderer.borderType = state.borderType;
+        }
+    }
+
+    const dbSlides = await getSlides(projectId);
+    const loadedSlides = [];
+
+    if (DOM.editorLoader) {
+        DOM.editorLoader.style.display = 'flex';
+        DOM.editorLoader.querySelector('p').textContent = 'Loading project data…';
+    }
+
+    try {
+        for (const dbSlide of dbSlides) {
+            const img = await blobToImage(dbSlide.imgBlob);
+            const mask = await blobToCanvas(dbSlide.maskBlob);
+
+            loadedSlides.push({
+                id: dbSlide.id,
+                img: img,
+                mask: mask,
+                cutout: null,
+                text: dbSlide.text,
+                rotation: dbSlide.rotation
+            });
+        }
+
+        state.slides = loadedSlides;
+        state.activeSlideIdx = 0;
+
+        if (renderer) {
+            renderer.setSlides(state.slides);
+        }
+
+        onPhotosUpdated();
+        enableNextSteps();
+
+        if (state.currentStep === 2) {
+            loadSlideIntoEditor();
+        }
+
+        generateCaptionsEditor();
+
+        // Restore custom audio if it exists in the loaded project
+        state.customAudioFileBlob = project.audioBlob || null;
+        state.customAudioFilename = project.audioFilename || '';
+        
+        if (state.musicTheme === 'custom' && state.customAudioFileBlob) {
+            audio.loadCustomAudioFile(state.customAudioFileBlob).then((decodedBuffer) => {
+                audio.customAudioStart = state.customAudioStart;
+                audio.customAudioEnd = state.customAudioEnd !== null ? state.customAudioEnd : decodedBuffer.duration;
+                audio.setVolume(state.musicVolume);
+                configureAudioEditorSliders(decodedBuffer.duration);
+            }).catch(err => {
+                console.error("Failed to load project audio blob:", err);
+                if (DOM.customAudioEditor) DOM.customAudioEditor.style.display = 'none';
+            });
+        } else {
+            if (DOM.customAudioEditor) DOM.customAudioEditor.style.display = 'none';
+        }
+    } catch (e) {
+        console.error('[app] Failed to deserialize project slides:', e);
+    } finally {
+        state.isLoadingProject = false;
+        if (DOM.editorLoader) {
+            DOM.editorLoader.style.display = 'none';
+        }
+    }
+}
+
+async function createNewProject() {
+    const name = prompt('Enter a name for the new project:', 'New Project');
+    if (!name) return;
+
+    const newId = Math.random().toString(36).substr(2, 9);
+    const newProject = {
+        id: newId,
+        name: name.trim(),
+        settings: {
+            style: 'clean',
+            borderType: 'none',
+            bgPalette: 'dark',
+            slideDuration: 1.5,
+            beatSync: true,
+            musicTheme: 'lofi',
+            musicVolume: 0.8,
+            cutoutHoldRatio: 0.35,
+            customAudioStart: 0.0,
+            customAudioEnd: null
+        }
+    };
+    await saveProject(newProject);
+    state.activeProjectId = newId;
+
+    state.slides = [];
+    state.customAudioFileBlob = null;
+    state.customAudioFilename = '';
+    state.customAudioStart = 0.0;
+    state.customAudioEnd = null;
+    
+    if (renderer) renderer.setSlides([]);
+    onPhotosUpdated();
+
+    loadMockImages();
+
+    await refreshProjectList();
+    goToStep(1);
+}
+
+async function renameActiveProject() {
+    if (!state.activeProjectId) return;
+    const currentName = DOM.projectSelect.options[DOM.projectSelect.selectedIndex]?.text || '';
+    const newName = prompt('Rename project:', currentName);
+    if (!newName || newName.trim() === '' || newName.trim() === currentName) return;
+
+    const project = await getProject(state.activeProjectId);
+    if (project) {
+        project.name = newName.trim();
+        await saveProject(project);
+        await refreshProjectList();
+    }
+}
+
+async function deleteActiveProject() {
+    if (!state.activeProjectId) return;
+
+    const projects = await getProjects();
+    if (projects.length <= 1) {
+        alert('You must keep at least one project.');
+        return;
+    }
+
+    const currentName = DOM.projectSelect.options[DOM.projectSelect.selectedIndex]?.text || '';
+    if (!confirm(`Are you sure you want to delete "${currentName}"? This will delete all its images and edits forever.`)) {
+        return;
+    }
+
+    await deleteProject(state.activeProjectId);
+
+    const remaining = await getProjects();
+    state.activeProjectId = remaining[0].id;
+
+    await refreshProjectList();
+    await loadProject(state.activeProjectId);
+    goToStep(1);
+}
+
+async function refreshProjectList() {
+    const projects = await getProjects();
+    DOM.projectSelect.innerHTML = '';
+    projects.forEach((proj) => {
+        const opt = document.createElement('option');
+        opt.value = proj.id;
+        opt.textContent = proj.name;
+        if (proj.id === state.activeProjectId) {
+            opt.selected = true;
+        }
+        DOM.projectSelect.appendChild(opt);
+    });
+}
+
+async function initProjects() {
+    await openDb();
+    const projects = await getProjects();
+
+    if (projects.length === 0) {
+        const defaultId = Math.random().toString(36).substr(2, 9);
+        const defaultProject = {
+            id: defaultId,
+            name: 'My First Project',
+            settings: {
+                style: 'clean',
+                borderType: 'none',
+                bgPalette: 'dark',
+                slideDuration: 1.5,
+                beatSync: true,
+                musicTheme: 'lofi'
+            }
+        };
+        await saveProject(defaultProject);
+        state.activeProjectId = defaultId;
+        loadMockImages();
+    } else {
+        state.activeProjectId = projects[0].id;
+        await loadProject(state.activeProjectId);
+        if (state.slides.length === 0) {
+            loadMockImages();
+        }
+    }
+
+    await refreshProjectList();
+}
+
+// Triggered when file list changes
+function onPhotosUpdated() {
+    DOM.photoCount.textContent = state.slides.length;
+    DOM.photoGrid.innerHTML = '';
+    
+    // Autosave slides state on any change
+    triggerAutosave();
+    
+    state.slides.forEach((slide, idx) => {
+        const item = document.createElement('div');
+        item.className = 'photo-item';
+        item.setAttribute('draggable', 'true');
+        item.dataset.id = slide.id;
+        item.innerHTML = `
+            <img src="${slide.img.src}" alt="Uploaded Photo">
+            <button class="remove-btn" data-id="${slide.id}">✕</button>
+            <span class="cutout-status-badge">Cutout</span>
+        `;
+        
+        // Drag and Drop Logic
+        item.addEventListener('dragstart', (e) => {
+            e.dataTransfer.setData('text/plain', slide.id);
+            item.classList.add('dragging');
+            // Timeout needed to allow CSS change to render while dragging
+            setTimeout(() => item.style.opacity = '0.5', 0);
+        });
+        
+        item.addEventListener('dragend', () => {
+            item.classList.remove('dragging');
+            item.style.opacity = '1';
+        });
+        
+        // Delete button listener
+        item.querySelector('.remove-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            state.slides = state.slides.filter(s => s.id !== slide.id);
+            onPhotosUpdated();
+            if (state.slides.length < 5) {
+                DOM.toStep2.disabled = true;
+            }
+        });
+
+        // Open preview modal on click (skipping delete button clicks)
+        item.addEventListener('click', (e) => {
+            if (e.target.closest('.remove-btn')) return;
+            openPreviewModal(idx);
+        });
+        
+        DOM.photoGrid.appendChild(item);
+    });
+    
+    // Grid Drag Over Events
+    if (!DOM.photoGrid.dataset.dragInit) {
+        DOM.photoGrid.dataset.dragInit = "true";
+        DOM.photoGrid.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            const draggingElement = DOM.photoGrid.querySelector('.dragging');
+            const target = e.target.closest('.photo-item');
+            if (target && target !== draggingElement) {
+                const box = target.getBoundingClientRect();
+                const next = (e.clientX - box.left > box.width / 2) || (e.clientY - box.top > box.height / 2);
+                DOM.photoGrid.insertBefore(draggingElement, next ? target.nextSibling : target);
+            }
+        });
+        
+        DOM.photoGrid.addEventListener('drop', (e) => {
+            e.preventDefault();
+            const currentOrderIds = Array.from(DOM.photoGrid.querySelectorAll('.photo-item')).map(el => el.dataset.id);
+            state.slides = currentOrderIds.map(id => state.slides.find(s => s.id === id));
+            onPhotosUpdated();
+        });
+    }
+    
+    if (state.slides.length >= 5) {
+        DOM.toStep2.disabled = false;
+        DOM.uploadedSection.style.display = 'block';
+    } else {
+        DOM.toStep2.disabled = true;
+        DOM.uploadedSection.style.display = 'none';
+    }
+    
+    // Sync with renderer
+    renderer.setSlides(state.slides);
+    
+    // Re-populate dropdown and captions editor
+    populateCutoutSelector();
+    generateCaptionsEditor();
+}
+
+function enableNextSteps() {
+    DOM.stepBtns.forEach(btn => {
+        btn.disabled = false;
+    });
+}
+
+// Populate Step 2 Dropdown
+function populateCutoutSelector() {
+    DOM.editorPhotoSelect.innerHTML = '';
+    state.slides.forEach((slide, idx) => {
+        const opt = document.createElement('option');
+        opt.value = idx;
+        opt.textContent = `Image ${idx + 1}: ${slide.text || 'Untitled'}`;
+        DOM.editorPhotoSelect.appendChild(opt);
+    });
+}
+
+// Generate Step 3 caption inputs
+function generateCaptionsEditor() {
+    DOM.captionsContainer.innerHTML = '';
+    state.slides.forEach((slide, idx) => {
+        const item = document.createElement('div');
+        item.className = 'caption-editor-item';
+        item.innerHTML = `
+            <div style="display: flex; flex-direction: column; width: 100%; gap: 8px;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span class="caption-num">${idx + 1}</span>
+                    <input type="text" class="caption-input" data-idx="${idx}" value="${slide.text}" placeholder="Enter caption text..." style="flex: 1;">
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px; padding-left: 28px;">
+                    <span style="font-size: 11px; color: var(--text-muted);">Rotation:</span>
+                    <input type="range" class="rotation-slider custom-slider" data-idx="${idx}" min="-30" max="30" value="${Math.round((slide.rotation || 0) * 180 / Math.PI)}" style="flex: 1;">
+                    <span class="rotation-val" data-idx="${idx}" style="font-size: 11px; width: 28px; text-align: right;">${Math.round((slide.rotation || 0) * 180 / Math.PI)}°</span>
+                </div>
+            </div>
+        `;
+        
+        item.querySelector('.caption-input').addEventListener('input', (e) => {
+            const index = parseInt(e.target.dataset.idx);
+            state.slides[index].text = e.target.value;
+            // Force re-update renderer references
+            renderer.setSlides(state.slides);
+            
+            // Sync with editor dropdown label
+            const option = DOM.editorPhotoSelect.options[index];
+            if (option) {
+                option.textContent = `Image ${index + 1}: ${e.target.value || 'Untitled'}`;
+            }
+            triggerAutosave();
+        });
+
+        item.querySelector('.rotation-slider').addEventListener('input', (e) => {
+            const index = parseInt(e.target.dataset.idx);
+            const val = parseInt(e.target.value);
+            state.slides[index].rotation = val * Math.PI / 180;
+            item.querySelector('.rotation-val').textContent = val + '°';
+            // Force re-update renderer references
+            renderer.setSlides(state.slides);
+            triggerAutosave();
+        });
+        
+        DOM.captionsContainer.appendChild(item);
+    });
+}
+
+// Event Listeners Setup
+function setupEventListeners() {
+    
+    // Project Select dropdown change
+    DOM.projectSelect.addEventListener('change', async (e) => {
+        state.activeProjectId = e.target.value;
+        await loadProject(state.activeProjectId);
+    });
+
+    // Project Actions
+    DOM.btnNewProject.addEventListener('click', createNewProject);
+    DOM.btnRenameProject.addEventListener('click', renameActiveProject);
+    DOM.btnDeleteProject.addEventListener('click', deleteActiveProject);
+    
+    // Drag and Drop Zone
+    DOM.dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        DOM.dropZone.classList.add('dragover');
+    });
+    
+    DOM.dropZone.addEventListener('dragleave', () => {
+        DOM.dropZone.classList.remove('dragover');
+    });
+    
+    DOM.dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        DOM.dropZone.classList.remove('dragover');
+        handleFiles(e.dataTransfer.files);
+    });
+    
+    DOM.fileInput.addEventListener('change', (e) => {
+        handleFiles(e.target.files);
+    });
+    
+    DOM.clearAll.addEventListener('click', () => {
+        state.slides = [];
+        onPhotosUpdated();
+    });
+
+    // Step Nav Transitions
+    DOM.stepBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const stepNum = parseInt(btn.dataset.step);
+            goToStep(stepNum);
+        });
+    });
+
+    // Step Action Buttons
+    DOM.toStep2.addEventListener('click', () => goToStep(2));
+    DOM.toStep3.addEventListener('click', () => goToStep(3));
+    DOM.toStep4.addEventListener('click', () => goToStep(4));
+    
+    DOM.backTo1.addEventListener('click', () => goToStep(1));
+    DOM.backTo2.addEventListener('click', () => goToStep(2));
+    DOM.backTo3.addEventListener('click', () => goToStep(3));
+
+    // Step 2 Editor Controls
+    DOM.editorPhotoSelect.addEventListener('change', (e) => {
+        state.activeSlideIdx = parseInt(e.target.value);
+        loadSlideIntoEditor();
+    });
+
+    DOM.toolBrush.addEventListener('click', () => selectEditorTool('brush'));
+    DOM.toolEraser.addEventListener('click', () => selectEditorTool('eraser'));
+    
+    const lassoBtn = document.getElementById('tool-lasso');
+    if (lassoBtn) lassoBtn.addEventListener('click', () => selectEditorTool('lasso'));
+    
+    DOM.toolClear.addEventListener('click', () => {
+        const slide = state.slides[state.activeSlideIdx];
+        if (slide && slide.mask) {
+            const ctx = slide.mask.getContext('2d');
+            ctx.clearRect(0, 0, slide.mask.width, slide.mask.height);
+            // Re-render cutout
+            slide.cutout = renderer.generateCutout(slide.img, slide.mask);
+            renderer.setSlides(state.slides);
+            drawEditorFrame();
+            triggerAutosave();
+        }
+    });
+
+    DOM.toolMagic.addEventListener('click', () => {
+        const slide = state.slides[state.activeSlideIdx];
+        if (slide) {
+            DOM.editorLoader.style.display = 'flex';
+            // Show contextual loading message
+            const loaderP = DOM.editorLoader.querySelector('p');
+            const badge = DOM.aiBadge;
+            if (badge.classList.contains('badge-ready')) {
+                if (loaderP) loaderP.textContent = 'AI is extracting subject...';
+            } else if (badge.classList.contains('badge-loading') || badge.classList.contains('badge-connecting')) {
+                if (loaderP) loaderP.textContent = 'Downloading AI model (~30MB)...';
+            } else {
+                if (loaderP) loaderP.textContent = 'Extracting subject (fast mode)...';
+            }
+            detectSubject(slide.img, state.autoSensitivity / 100).then(mask => {
+                slide.mask = mask;
+                slide.cutout = renderer.generateCutout(slide.img, slide.mask);
+                renderer.setSlides(state.slides);
+                DOM.editorLoader.style.display = 'none';
+                if (loaderP) loaderP.textContent = 'Extracting subject...';
+                drawEditorFrame();
+                triggerAutosave();
+            });
+        }
+    });
+
+    DOM.brushSizeSlider.addEventListener('input', (e) => {
+        state.brushSize = parseInt(e.target.value);
+        DOM.brushSizeVal.textContent = state.brushSize + 'px';
+    });
+
+    const featherSlider = document.getElementById('feather-radius');
+    const featherVal    = document.getElementById('feather-val');
+    if (featherSlider) {
+        featherSlider.addEventListener('input', (e) => {
+            state.featherRadius = parseInt(e.target.value);
+            if (featherVal) featherVal.textContent = state.featherRadius + 'px';
+        });
+    }
+
+    DOM.autoSensSlider.addEventListener('input', (e) => {
+        state.autoSensitivity = parseInt(e.target.value);
+        DOM.autoSensVal.textContent = state.autoSensitivity + '%';
+    });
+
+    // Step 2 Canvas Drawing Logic
+    setupEditorDrawing();
+
+    // Step 3 Collage Theme Cards
+    DOM.styleCards.forEach(card => {
+        card.addEventListener('click', () => {
+            DOM.styleCards.forEach(c => c.classList.remove('active'));
+            card.classList.add('active');
+            state.style = card.dataset.style;
+            renderer.activeStyle = state.style;
+            DOM.hudStyleTag.textContent = card.querySelector('.style-card-title').textContent;
+            triggerAutosave();
+        });
+    });
+
+    // Beat Sync Toggle
+    DOM.beatSyncCheckbox.addEventListener('change', (e) => {
+        state.beatSync = e.target.checked;
+        renderer.beatSync = state.beatSync;
+        triggerAutosave();
+    });
+
+    // Settings
+    DOM.slideDurationSlider.addEventListener('input', (e) => {
+        state.slideDuration = parseFloat(e.target.value);
+        DOM.slideDurVal.textContent = state.slideDuration + 's';
+        renderer.slideDuration = state.slideDuration;
+        triggerAutosave();
+    });
+
+    // Timing slider listener
+    DOM.cutoutHoldSlider.addEventListener('input', (e) => {
+        state.cutoutHoldRatio = parseFloat(e.target.value) / 100;
+        DOM.cutoutHoldVal.textContent = e.target.value + '%';
+        renderer.cutoutHoldRatio = state.cutoutHoldRatio;
+        triggerAutosave();
+    });
+
+    DOM.cutoutBorderSelect.addEventListener('change', (e) => {
+        state.borderType = e.target.value;
+        renderer.borderType = state.borderType;
+        triggerAutosave();
+    });
+
+    DOM.bgStyleSelect.addEventListener('change', (e) => {
+        state.bgPalette = e.target.value;
+        renderer.bgPalette = state.bgPalette;
+        triggerAutosave();
+    });
+
+    // Music theme selector
+    DOM.musicSelect.addEventListener('change', (e) => {
+        state.musicTheme = e.target.value;
+        if (state.musicTheme === 'custom') {
+            if (state.customAudioFileBlob) {
+                DOM.customAudioEditor.style.display = 'flex';
+                // Trigger play if already playing
+                if (state.isPlaying) {
+                    audio.start(onAudioBeat);
+                }
+            } else {
+                DOM.customAudioInput.click();
+            }
+        } else {
+            if (DOM.customAudioEditor) DOM.customAudioEditor.style.display = 'none';
+            audio.setTheme(state.musicTheme);
+            if (state.isPlaying) {
+                audio.start(onAudioBeat);
+            }
+        }
+        if (DOM.musicVolumeContainer) {
+            DOM.musicVolumeContainer.style.display = state.musicTheme === 'none' ? 'none' : 'block';
+        }
+        triggerAutosave();
+    });
+
+    DOM.customAudioInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            // Strip system File wrapper to avoid DataCloneError in IndexedDB
+            state.customAudioFileBlob = new Blob([file], { type: file.type });
+            state.customAudioFilename = file.name;
+            audio.loadCustomAudioFile(file).then((decodedBuffer) => {
+                state.customAudioStart = 0;
+                state.customAudioEnd = decodedBuffer.duration;
+                
+                audio.customAudioStart = state.customAudioStart;
+                audio.customAudioEnd = state.customAudioEnd;
+                audio.setVolume(state.musicVolume);
+                
+                configureAudioEditorSliders(decodedBuffer.duration);
+                triggerAutosave();
+                
+                if (state.isPlaying) {
+                    audio.start(onAudioBeat);
+                }
+            }).catch(err => {
+                console.error("Failed to load custom audio:", err);
+            });
+        }
+    });
+
+    // Music Volume Slider Listeners (global)
+    if (DOM.musicVolumeSlider) {
+        DOM.musicVolumeSlider.addEventListener('input', (e) => {
+            state.musicVolume = parseFloat(e.target.value) / 100;
+            DOM.musicVolumeVal.textContent = e.target.value + '%';
+            audio.setVolume(state.musicVolume);
+        });
+
+        DOM.musicVolumeSlider.addEventListener('change', () => {
+            triggerAutosave();
+        });
+    }
+
+    if (DOM.audioStartSlider) {
+        DOM.audioStartSlider.addEventListener('input', (e) => {
+            const val = parseFloat(e.target.value);
+            if (state.customAudioEnd !== null && val >= state.customAudioEnd - 0.5) {
+                DOM.audioStartSlider.value = state.customAudioEnd - 0.5;
+                state.customAudioStart = state.customAudioEnd - 0.5;
+            } else {
+                state.customAudioStart = val;
+            }
+            DOM.audioStartVal.textContent = state.customAudioStart.toFixed(1) + 's';
+            audio.customAudioStart = state.customAudioStart;
+        });
+
+        DOM.audioStartSlider.addEventListener('change', () => {
+            audio.restartCustomBuffer();
+            triggerAutosave();
+        });
+    }
+
+    if (DOM.audioEndSlider) {
+        DOM.audioEndSlider.addEventListener('input', (e) => {
+            const val = parseFloat(e.target.value);
+            if (val <= state.customAudioStart + 0.5) {
+                DOM.audioEndSlider.value = state.customAudioStart + 0.5;
+                state.customAudioEnd = state.customAudioStart + 0.5;
+            } else {
+                state.customAudioEnd = val;
+            }
+            DOM.audioEndVal.textContent = state.customAudioEnd.toFixed(1) + 's';
+            audio.customAudioEnd = state.customAudioEnd;
+        });
+
+        DOM.audioEndSlider.addEventListener('change', () => {
+            audio.restartCustomBuffer();
+            triggerAutosave();
+        });
+    }
+
+    // Timing Settings Info Banner Listeners
+    if (DOM.infoBtnDuration) {
+        DOM.infoBtnDuration.addEventListener('click', (e) => {
+            e.preventDefault();
+            DOM.timingInfoBox.style.display = 'flex';
+            DOM.timingInfoTitle.textContent = "⏱️ Slide Duration";
+            DOM.timingInfoDesc.textContent = "Controls the total time (in seconds) that each slide/photo is displayed in the video before moving on to the next. Increasing this gives the viewer more time to look at the completed photo.";
+        });
+    }
+
+    if (DOM.infoBtnHold) {
+        DOM.infoBtnHold.addEventListener('click', (e) => {
+            e.preventDefault();
+            DOM.timingInfoBox.style.display = 'flex';
+            DOM.timingInfoTitle.textContent = "✨ Cutout Hold Duration";
+            DOM.timingInfoDesc.textContent = "Controls the pause duration between the subject cutout appearing on a black background and the rest of the original photo fading in. A lower value (e.g. 10%) means the background appears almost instantly, while a higher value (e.g. 70%) keeps the cutout alone on screen for longer before the full photo is revealed.";
+        });
+    }
+
+    if (DOM.timingInfoClose) {
+        DOM.timingInfoClose.addEventListener('click', (e) => {
+            e.preventDefault();
+            DOM.timingInfoBox.style.display = 'none';
+        });
+    }
+
+    // HUD Playback Controls
+    DOM.hudPlayBtn.addEventListener('click', togglePlayback);
+    
+    // Export Actions
+    DOM.btnStartExport.addEventListener('click', startExportingVideo);
+    DOM.btnCancelExport.addEventListener('click', cancelExportingVideo);
+
+    // Image Preview Modal Listeners
+    DOM.previewModalClose.addEventListener('click', closePreviewModal);
+    DOM.previewModalOverlay.addEventListener('click', closePreviewModal);
+    
+    DOM.tabPreviewOrig.addEventListener('click', () => {
+        state.previewTab = 'orig';
+        DOM.tabPreviewOrig.classList.add('active');
+        DOM.tabPreviewCutout.classList.remove('active');
+        updatePreviewContent();
+    });
+    
+    DOM.tabPreviewCutout.addEventListener('click', () => {
+        state.previewTab = 'cutout';
+        DOM.tabPreviewCutout.classList.add('active');
+        DOM.tabPreviewOrig.classList.remove('active');
+        updatePreviewContent();
+    });
+    
+    DOM.btnPreviewPrev.addEventListener('click', () => {
+        if (state.previewActiveIdx > 0) {
+            state.previewActiveIdx--;
+            updatePreviewContent();
+        }
+    });
+    
+    DOM.btnPreviewNext.addEventListener('click', () => {
+        if (state.previewActiveIdx < state.slides.length - 1) {
+            state.previewActiveIdx++;
+            updatePreviewContent();
+        }
+    });
+}
+
+// Image Preview Modal Functions
+function openPreviewModal(index) {
+    state.previewActiveIdx = index;
+    state.previewTab = 'orig';
+    
+    // Pause main playback if playing
+    if (state.isPlaying) {
+        togglePlayback();
+    }
+    
+    DOM.previewModal.style.display = 'flex';
+    // Small timeout to allow display change to take effect before opacity transition
+    setTimeout(() => {
+        DOM.previewModal.classList.add('active');
+    }, 10);
+    
+    // Set up tabs
+    DOM.tabPreviewOrig.classList.add('active');
+    DOM.tabPreviewCutout.classList.remove('active');
+    
+    updatePreviewContent();
+    
+    // Add global event listeners for closing and navigation
+    document.addEventListener('keydown', handlePreviewKeyDown);
+}
+
+function closePreviewModal() {
+    DOM.previewModal.classList.remove('active');
+    setTimeout(() => {
+        DOM.previewModal.style.display = 'none';
+    }, 300);
+    
+    state.previewActiveIdx = null;
+    
+    // Remove global listeners
+    document.removeEventListener('keydown', handlePreviewKeyDown);
+}
+
+function updatePreviewContent() {
+    if (state.previewActiveIdx === null || state.previewActiveIdx < 0 || state.previewActiveIdx >= state.slides.length) {
+        closePreviewModal();
+        return;
+    }
+    
+    const slide = state.slides[state.previewActiveIdx];
+    
+    // Update counter
+    DOM.previewModalCounter.textContent = `${state.previewActiveIdx + 1} / ${state.slides.length}`;
+    
+    // Update caption
+    DOM.previewModalCaption.textContent = slide.text || `Photo ${state.previewActiveIdx + 1}`;
+    
+    // Enable/disable navigation buttons
+    DOM.btnPreviewPrev.disabled = state.previewActiveIdx === 0;
+    DOM.btnPreviewNext.disabled = state.previewActiveIdx === state.slides.length - 1;
+    
+    // Render based on current active tab
+    if (state.previewTab === 'orig') {
+        DOM.previewImageContainer.classList.remove('checkerboard');
+        DOM.previewModalImgOrig.src = slide.img.src;
+        DOM.previewModalImgOrig.classList.add('active');
+        DOM.previewModalCanvasCutout.style.display = 'none';
+        DOM.previewModalCanvasCutout.classList.remove('active');
+    } else {
+        DOM.previewImageContainer.classList.add('checkerboard');
+        DOM.previewModalImgOrig.classList.remove('active');
+        DOM.previewModalCanvasCutout.style.display = 'block';
+        DOM.previewModalCanvasCutout.classList.add('active');
+        
+        // Render cutout onto preview canvas
+        const canvas = DOM.previewModalCanvasCutout;
+        
+        // Ensure cutout exists (compile on the fly if needed)
+        if (!slide.cutout && slide.mask && renderer) {
+            slide.cutout = renderer.generateCutout(slide.img, slide.mask);
+        }
+        
+        if (slide.cutout) {
+            canvas.width = slide.cutout.width;
+            canvas.height = slide.cutout.height;
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(slide.cutout, 0, 0);
+        } else {
+            // No cutout or mask yet, just clear and show empty or original
+            canvas.width = slide.img.naturalWidth || 600;
+            canvas.height = slide.img.naturalHeight || 400;
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            // Put placeholder text
+            ctx.fillStyle = '#a5a5b5';
+            ctx.font = '20px Outfit';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('Processing AI Cutout...', canvas.width / 2, canvas.height / 2);
+        }
+    }
+}
+
+function handlePreviewKeyDown(e) {
+    if (e.key === 'Escape') {
+        closePreviewModal();
+    } else if (e.key === 'ArrowLeft') {
+        if (state.previewActiveIdx > 0) {
+            state.previewActiveIdx--;
+            updatePreviewContent();
+        }
+    } else if (e.key === 'ArrowRight') {
+        if (state.previewActiveIdx < state.slides.length - 1) {
+            state.previewActiveIdx++;
+            updatePreviewContent();
+        }
+    }
+}
+
+// Wizard Step Navigation Routing
+function goToStep(stepNum) {
+    state.currentStep = stepNum;
+    
+    DOM.stepBtns.forEach(btn => {
+        btn.classList.remove('active');
+        if (parseInt(btn.dataset.step) === stepNum) {
+            btn.classList.add('active');
+        }
+    });
+    
+    DOM.stepPanels.forEach(panel => {
+        panel.classList.remove('active');
+        if (parseInt(panel.dataset.step) === stepNum) {
+            panel.classList.add('active');
+        }
+    });
+    
+    // Step specific loads
+    if (stepNum === 2) {
+        // Pause active preview to focus resources on cutout editor
+        if (state.isPlaying) togglePlayback();
+        loadSlideIntoEditor();
+    } else if (stepNum === 3) {
+        // Resume previewing
+        if (!state.isPlaying) togglePlayback();
+    }
+}
+
+// Parse uploaded files
+function handleFiles(files) {
+    const validFiles = Array.from(files).filter(f => f.type.startsWith('image/'));
+    
+    if (validFiles.length === 0) return;
+    
+    validFiles.forEach(file => {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            const img = new Image();
+            img.onload = () => {
+                // Auto subject detect on load
+                detectSubject(img, 0.4).then(mask => {
+                    state.slides.push({
+                        id: Math.random().toString(36).substr(2, 9),
+                        img: img,
+                        mask: mask,
+                        cutout: null, // precomputed in renderer
+                        text: 'Memory Moment',
+                        rotation: (Math.random() - 0.5) * 8 * Math.PI / 180 // Random -4 to +4 degrees
+                    });
+                    onPhotosUpdated();
+                    enableNextSteps();
+                });
+            };
+            img.src = event.target.result;
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
+// --- STEP 2 EDITOR INTERFACE ---
+
+function selectEditorTool(tool) {
+    // Cancel any active lasso session when switching tools
+    if (state.editorTool === 'lasso' && tool !== 'lasso') {
+        state.lassoPoints = [];
+        state.lassoActive = false;
+        state.lassoMousePos = null;
+        drawEditorFrame();
+    }
+    
+    state.editorTool = tool;
+    DOM.toolBrush.classList.remove('active');
+    DOM.toolEraser.classList.remove('active');
+    const lassoBtn = document.getElementById('tool-lasso');
+    if (lassoBtn) lassoBtn.classList.remove('active');
+    
+    if (tool === 'brush')  DOM.toolBrush.classList.add('active');
+    if (tool === 'eraser') DOM.toolEraser.classList.add('active');
+    if (tool === 'lasso' && lassoBtn) lassoBtn.classList.add('active');
+}
+
+function loadSlideIntoEditor() {
+    const slide = state.slides[state.activeSlideIdx];
+    if (!slide) return;
+    
+    edImage = slide.img;
+    
+    // Scale editor canvas to fit image proportions
+    const aspect = edImage.naturalWidth / edImage.naturalHeight;
+    const maxW = 340;
+    const maxH = 340;
+    
+    let destW = maxW;
+    let destH = destW / aspect;
+    if (destH > maxH) {
+        destH = maxH;
+        destW = destH * aspect;
+    }
+    
+    DOM.editorCanvas.width = destW;
+    DOM.editorCanvas.height = destH;
+    
+    drawEditorFrame();
+}
+
+// Redraws the manual cutout editor canvas (original image + transparent red mask overlay)
+function drawEditorFrame() {
+    const slide = state.slides[state.activeSlideIdx];
+    if (!slide || !edImage) return;
+    
+    const w = DOM.editorCanvas.width;
+    const h = DOM.editorCanvas.height;
+    
+    edCtx.clearRect(0, 0, w, h);
+    
+    // 1. Draw original photo
+    edCtx.drawImage(edImage, 0, 0, w, h);
+    
+    // 2. Draw red background mask overlay
+    const overlayCanvas = document.createElement('canvas');
+    overlayCanvas.width = w;
+    overlayCanvas.height = h;
+    const oCtx = overlayCanvas.getContext('2d');
+    oCtx.fillStyle = 'rgba(239, 71, 111, 0.45)';
+    oCtx.fillRect(0, 0, w, h);
+    oCtx.globalCompositeOperation = 'destination-out';
+    oCtx.drawImage(slide.mask, 0, 0, w, h);
+    edCtx.drawImage(overlayCanvas, 0, 0);
+    
+    // 3. Draw live lasso preview on top
+    if (state.editorTool === 'lasso' && state.lassoPoints.length > 0) {
+        const pts = state.lassoPoints;
+        const mouse = state.lassoMousePos;
+        
+        edCtx.save();
+        
+        // Dashed path line
+        edCtx.setLineDash([5, 4]);
+        edCtx.lineWidth = 1.5;
+        edCtx.strokeStyle = 'rgba(255,255,255,0.9)';
+        edCtx.shadowColor = 'rgba(0,0,0,0.8)';
+        edCtx.shadowBlur = 3;
+        edCtx.beginPath();
+        edCtx.moveTo(pts[0].x, pts[0].y);
+        for (let i = 1; i < pts.length; i++) edCtx.lineTo(pts[i].x, pts[i].y);
+        // Line to current mouse
+        if (mouse) edCtx.lineTo(mouse.x, mouse.y);
+        edCtx.stroke();
+        
+        // Closing line hint (dashed in different colour)
+        if (mouse && pts.length > 2) {
+            edCtx.setLineDash([3, 6]);
+            edCtx.strokeStyle = 'rgba(157, 78, 221, 0.7)';
+            edCtx.beginPath();
+            edCtx.moveTo(mouse.x, mouse.y);
+            edCtx.lineTo(pts[0].x, pts[0].y);
+            edCtx.stroke();
+        }
+        
+        edCtx.setLineDash([]);
+        edCtx.shadowBlur = 0;
+        
+        // Draw point handles
+        pts.forEach((pt, i) => {
+            const isFirst = i === 0;
+            const r = isFirst ? 7 : 4;
+            edCtx.beginPath();
+            edCtx.arc(pt.x, pt.y, r, 0, Math.PI * 2);
+            edCtx.fillStyle = isFirst ? 'rgba(157,78,221,0.9)' : 'rgba(255,255,255,0.9)';
+            edCtx.fill();
+            edCtx.lineWidth = 1.5;
+            edCtx.strokeStyle = isFirst ? '#fff' : 'rgba(157,78,221,0.9)';
+            edCtx.stroke();
+        });
+        
+        // Show "close" hint when near first point
+        if (mouse && pts.length > 2) {
+            const dx = mouse.x - pts[0].x, dy = mouse.y - pts[0].y;
+            if (Math.hypot(dx, dy) < 18) {
+                edCtx.fillStyle = 'rgba(157,78,221,0.85)';
+                edCtx.font = 'bold 11px Outfit, sans-serif';
+                edCtx.fillText('Close ✓', pts[0].x + 10, pts[0].y - 10);
+            }
+        }
+        
+        edCtx.restore();
+    }
+}
+
+/**
+ * Commits the current N-point lasso polygon to the slide's mask.
+ * Fills the polygon interior then applies a Gaussian feather for smooth edges.
+ */
+function commitLassoPolygon(mode = 'add') {
+    const pts = state.lassoPoints;
+    if (pts.length < 3) return;
+    
+    const slide = state.slides[state.activeSlideIdx];
+    if (!slide) return;
+    
+    const mW = slide.mask.width;
+    const mH = slide.mask.height;
+    const eW = DOM.editorCanvas.width;
+    const eH = DOM.editorCanvas.height;
+    const sx = mW / eW;
+    const sy = mH / eH;
+    
+    // ── 1. Draw filled polygon on a temporary canvas at mask resolution ──
+    const polyCanvas = document.createElement('canvas');
+    polyCanvas.width  = mW;
+    polyCanvas.height = mH;
+    const pCtx = polyCanvas.getContext('2d');
+    
+    pCtx.beginPath();
+    pCtx.moveTo(pts[0].x * sx, pts[0].y * sy);
+    for (let i = 1; i < pts.length; i++) pCtx.lineTo(pts[i].x * sx, pts[i].y * sy);
+    pCtx.closePath();
+    pCtx.fillStyle = '#ffffff';
+    pCtx.fill();
+    
+    // ── 2. Feather the polygon by blurring then re-thresholding ──────────
+    const feather = Math.max(0, state.featherRadius);
+    if (feather > 0) {
+        // Blur to create soft edge
+        pCtx.filter = `blur(${feather}px)`;
+        const blurCanvas = document.createElement('canvas');
+        blurCanvas.width = mW; blurCanvas.height = mH;
+        const bCtx = blurCanvas.getContext('2d');
+        bCtx.filter = `blur(${feather}px)`;
+        bCtx.drawImage(polyCanvas, 0, 0);
+        bCtx.filter = 'none';
+        // Use the blurred version as our polygon
+        pCtx.clearRect(0, 0, mW, mH);
+        pCtx.drawImage(blurCanvas, 0, 0);
+    }
+    
+    // ── 3. Composite onto the real mask ──────────────────────────────────
+    const mCtx = slide.mask.getContext('2d');
+    mCtx.save();
+    if (mode === 'add') {
+        mCtx.globalCompositeOperation = 'source-over';
+    } else {
+        // 'subtract' — erase from mask using the polygon
+        mCtx.globalCompositeOperation = 'destination-out';
+    }
+    mCtx.drawImage(polyCanvas, 0, 0);
+    mCtx.restore();
+    
+    // ── 4. Regenerate cutout + update renderer ────────────────────────────
+    slide.cutout = renderer.generateCutout(slide.img, slide.mask);
+    renderer.setSlides(state.slides);
+    
+    // ── 5. Reset lasso state ──────────────────────────────────────────────
+    state.lassoPoints  = [];
+    state.lassoActive  = false;
+    state.lassoMousePos = null;
+    drawEditorFrame();
+    triggerAutosave();
+}
+
+function setupEditorDrawing() {
+    const getCoords = (e) => {
+        const rect = DOM.editorCanvas.getBoundingClientRect();
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        return {
+            x: ((clientX - rect.left) / rect.width) * DOM.editorCanvas.width,
+            y: ((clientY - rect.top) / rect.height) * DOM.editorCanvas.height
+        };
+    };
+    
+    // ── Brush / Eraser drawing ────────────────────────────────────────────
+    const paint = (e) => {
+        if (!state.isDrawing) return;
+        e.preventDefault();
+        
+        const coords = getCoords(e);
+        const slide  = state.slides[state.activeSlideIdx];
+        if (!slide) return;
+        
+        const mCtx  = slide.mask.getContext('2d');
+        const scaleX = slide.mask.width  / DOM.editorCanvas.width;
+        const scaleY = slide.mask.height / DOM.editorCanvas.height;
+        const brushPx = state.brushSize * scaleX;
+        
+        mCtx.save();
+        mCtx.lineCap   = 'round';
+        mCtx.lineJoin  = 'round';
+        mCtx.lineWidth = brushPx;
+        
+        if (state.editorTool === 'brush') {
+            mCtx.globalCompositeOperation = 'source-over';
+            mCtx.strokeStyle = '#ffffff';
+            mCtx.fillStyle   = '#ffffff';
+        } else {
+            mCtx.globalCompositeOperation = 'destination-out';
+            mCtx.strokeStyle = 'rgba(0,0,0,1)';
+            mCtx.fillStyle   = 'rgba(0,0,0,1)';
+        }
+        
+        mCtx.beginPath();
+        if (state.lastX !== undefined) {
+            mCtx.moveTo(state.lastX * scaleX, state.lastY * scaleY);
+            mCtx.lineTo(coords.x   * scaleX, coords.y   * scaleY);
+            mCtx.stroke();
+        } else {
+            mCtx.arc(coords.x * scaleX, coords.y * scaleY, brushPx / 2, 0, Math.PI * 2);
+            mCtx.fill();
+        }
+        mCtx.restore();
+        
+        state.lastX = coords.x;
+        state.lastY = coords.y;
+        drawEditorFrame();
+    };
+    
+    const startPainting = (e) => {
+        if (state.editorTool !== 'brush' && state.editorTool !== 'eraser') return;
+        state.isDrawing = true;
+        state.lastX = undefined;
+        state.lastY = undefined;
+        paint(e);
+    };
+    
+    const stopPainting = () => {
+        if (!state.isDrawing) return;
+        state.isDrawing = false;
+        state.lastX = undefined;
+        state.lastY = undefined;
+        const slide = state.slides[state.activeSlideIdx];
+        if (slide) {
+            slide.cutout = renderer.generateCutout(slide.img, slide.mask);
+            renderer.setSlides(state.slides);
+            triggerAutosave();
+        }
+    };
+    
+    // ── Lasso (N-point polygon) interaction ───────────────────────────────
+    const handleLassoClick = (e) => {
+        if (state.editorTool !== 'lasso') return;
+        e.preventDefault();
+        const coords = getCoords(e);
+        const pts    = state.lassoPoints;
+        
+        // Close polygon if clicking near first point (within 18px) and have 3+ points
+        if (pts.length > 2) {
+            const dx = coords.x - pts[0].x;
+            const dy = coords.y - pts[0].y;
+            if (Math.hypot(dx, dy) < 18) {
+                // Check shift key for subtract mode
+                const mode = e.shiftKey ? 'subtract' : 'add';
+                commitLassoPolygon(mode);
+                return;
+            }
+        }
+        
+        // Add point
+        state.lassoPoints.push({ x: coords.x, y: coords.y });
+        state.lassoActive = true;
+        drawEditorFrame();
+    };
+    
+    const handleLassoDoubleClick = (e) => {
+        if (state.editorTool !== 'lasso') return;
+        e.preventDefault();
+        if (state.lassoPoints.length > 2) {
+            const mode = e.shiftKey ? 'subtract' : 'add';
+            commitLassoPolygon(mode);
+        }
+    };
+    
+    const handleLassoMouseMove = (e) => {
+        if (state.editorTool !== 'lasso' || !state.lassoActive) return;
+        state.lassoMousePos = getCoords(e);
+        drawEditorFrame();
+    };
+    
+    // ── Escape key cancels lasso ──────────────────────────────────────────
+    window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && state.editorTool === 'lasso') {
+            state.lassoPoints   = [];
+            state.lassoActive   = false;
+            state.lassoMousePos = null;
+            drawEditorFrame();
+        }
+        // Enter also commits
+        if (e.key === 'Enter' && state.editorTool === 'lasso' && state.lassoPoints.length > 2) {
+            commitLassoPolygon(e.shiftKey ? 'subtract' : 'add');
+        }
+    });
+
+    DOM.editorCanvas.addEventListener('mousedown',  startPainting);
+    DOM.editorCanvas.addEventListener('mousemove',  (e) => { paint(e); handleLassoMouseMove(e); });
+    window.addEventListener('mouseup',              stopPainting);
+    DOM.editorCanvas.addEventListener('click',      handleLassoClick);
+    DOM.editorCanvas.addEventListener('dblclick',   handleLassoDoubleClick);
+    
+    DOM.editorCanvas.addEventListener('touchstart', startPainting);
+    DOM.editorCanvas.addEventListener('touchmove',  paint);
+    window.addEventListener('touchend',             stopPainting);
+}
+
+// --- AUDIO & PLAYBACK ENGINE CONTROLLER ---
+
+function togglePlayback() {
+    if (state.slides.length === 0) return;
+    
+    state.isPlaying = !state.isPlaying;
+    
+    if (state.isPlaying) {
+        DOM.hudPlayBtn.textContent = '⏸️';
+        DOM.musicIndicator.style.display = 'flex';
+        // Play audio
+        console.log(`[Playback] Starting playback. Theme: ${state.musicTheme}, Volume: ${state.musicVolume}`);
+        if (state.musicVolume === 0) {
+            console.warn("[Playback] Music volume is set to 0% (muted). You won't hear any sound!");
+        }
+        audio.setTheme(state.musicTheme);
+        audio.start(onAudioBeat);
+    } else {
+        DOM.hudPlayBtn.textContent = '▶️';
+        DOM.musicIndicator.style.display = 'none';
+        // Stop audio
+        audio.stop();
+    }
+}
+
+// Triggers flash pulse on beat sync
+function onAudioBeat(time) {
+    if (renderer) {
+        renderer.triggerBeatPulse();
+    }
+}
+
+// --- MAIN LOOP ---
+
+let lastTime = 0;
+function animationTick(timestamp) {
+    if (!lastTime) lastTime = timestamp;
+    const dt = (timestamp - lastTime) / 1000.0;
+    lastTime = timestamp;
+
+    if (renderer) {
+        renderer.update(dt);
+        
+        if (state.isPlaying && !state.isRecording) {
+            state.playTime += dt;
+            const totalDuration = state.slides.length * state.slideDuration;
+            
+            if (state.playTime >= totalDuration) {
+                state.playTime = 0;
+            }
+            
+            // Sync HUD Timeline values
+            updateHudTimeline(totalDuration);
+        }
+        
+        // Draw current frame
+        if (!state.isRecording) {
+            renderer.draw(state.playTime);
+        }
+    }
+
+    requestAnimationFrame(animationTick);
+}
+
+function updateHudTimeline(totalDuration) {
+    // Seek Fill
+    const percent = (state.playTime / totalDuration) * 100;
+    DOM.hudProgressFill.style.width = percent + '%';
+    
+    // Timer Text
+    const m = Math.floor(state.playTime / 60);
+    const s = Math.floor(state.playTime % 60);
+    const tm = Math.floor(totalDuration / 60);
+    const ts = Math.floor(totalDuration % 60);
+    DOM.hudTimeVal.textContent = `${m}:${s.toString().padStart(2, '0')} / ${tm}:${ts.toString().padStart(2, '0')}`;
+    
+    // Slide counter tag
+    const curSlide = Math.floor(state.playTime / state.slideDuration) + 1;
+    DOM.hudCounter.textContent = `${Math.min(state.slides.length, curSlide)} / ${state.slides.length}`;
+}
+
+// --- VIDEO EXPORT PIPELINE ---
+
+function startExportingVideo() {
+    if (state.slides.length === 0) return;
+    
+    state.isRecording = true;
+    DOM.exportProgressArea.style.display = 'block';
+    DOM.btnStartExport.style.display = 'none';
+    DOM.btnCancelExport.style.display = 'block';
+    DOM.btnDownloadVideo.style.display = 'none';
+    DOM.backTo3.disabled = true;
+    
+    // Temporarily halt standard player
+    if (state.isPlaying) togglePlayback();
+    
+    const resolutionWidth = DOM.exportResolution.value === '1080' ? 1080 : 720;
+    const resolutionHeight = DOM.exportResolution.value === '1080' ? 1920 : 1280;
+    
+    // 1. Setup high-res recording canvas
+    const recordCanvas = document.createElement('canvas');
+    recordCanvas.width = resolutionWidth;
+    recordCanvas.height = resolutionHeight;
+    
+    const recordRenderer = new CollageRenderer(recordCanvas);
+    recordRenderer.activeStyle = state.style;
+    recordRenderer.borderType = state.borderType;
+    recordRenderer.bgPalette = state.bgPalette;
+    recordRenderer.slideDuration = state.slideDuration;
+    recordRenderer.beatSync = state.beatSync;
+    recordRenderer.setSlides(state.slides);
+    
+    // 2. Hook up MediaRecorder streams
+    const fps = 30;
+    const canvasStream = recordCanvas.captureStream(fps);
+    const combinedTracks = [...canvasStream.getVideoTracks()];
+    
+    // Mix music stream into video
+    let audioStream = null;
+    if (state.musicTheme !== 'none') {
+        audioStream = audio.getAudioStream();
+        combinedTracks.push(...audioStream.getAudioTracks());
+        
+        // Start synthetic audio context
+        audio.setTheme(state.musicTheme);
+        audio.start((time) => {
+            recordRenderer.triggerBeatPulse();
+        });
+    }
+    
+    const mergedStream = new MediaStream(combinedTracks);
+    
+    // Determine compatible mime codecs
+    const formatSelection = DOM.exportFormat.value;
+    let mimeType = 'video/webm;codecs=vp9,opus';
+    let fileExtension = '.webm';
+    
+    if (formatSelection === 'mp4' || !MediaRecorder.isTypeSupported(mimeType)) {
+        if (MediaRecorder.isTypeSupported('video/mp4;codecs=h264,aac')) {
+            mimeType = 'video/mp4;codecs=h264,aac';
+            fileExtension = '.mp4';
+        } else if (MediaRecorder.isTypeSupported('video/mp4')) {
+            mimeType = 'video/mp4';
+            fileExtension = '.mp4';
+        } else if (MediaRecorder.isTypeSupported('video/webm;codecs=vp8,opus')) {
+            mimeType = 'video/webm;codecs=vp8,opus';
+            fileExtension = '.webm';
+        } else {
+            mimeType = '';
+            fileExtension = '.webm';
+        }
+    }
+    
+    state.recordedChunks = [];
+    
+    try {
+        const options = mimeType ? { mimeType } : undefined;
+        state.recorder = new MediaRecorder(mergedStream, options);
+    } catch (e) {
+        console.warn("MimeType unsupported: " + mimeType + ", falling back to browser default.");
+        state.recorder = new MediaRecorder(mergedStream);
+    }
+
+    state.recorder.ondataavailable = (event) => {
+        if (event.data && event.data.size > 0) {
+            state.recordedChunks.push(event.data);
+        }
+    };
+    
+    state.recorder.onstop = () => {
+        // Turn off music synth
+        audio.stop();
+        
+        if (!state.isRecording) return; // recording aborted
+        
+        const videoBlob = new Blob(state.recordedChunks, { type: state.recorder.mimeType || 'video/webm' });
+        const videoURL = URL.createObjectURL(videoBlob);
+        
+        // Show download option
+        DOM.btnDownloadVideo.href = videoURL;
+        DOM.btnDownloadVideo.download = `scrapbook_collage_${Date.now()}${fileExtension}`;
+        DOM.btnDownloadVideo.style.display = 'flex';
+        
+        finishExportingState();
+    };
+
+    // 3. Start recording
+    state.recorder.start();
+    
+    const totalDuration = state.slides.length * state.slideDuration;
+    let t = 0;
+    const intervalMs = 1000 / fps;
+    
+    DOM.exportStatusText.textContent = "Rendering frames...";
+    
+    // Offline rendering loop to record exact 30fps snapshots (no lags in recorded video file)
+    const recordInterval = setInterval(() => {
+        if (!state.isRecording) {
+            clearInterval(recordInterval);
+            return;
+        }
+        
+        recordRenderer.update(1.0 / fps);
+        recordRenderer.draw(t);
+        
+        t += 1.0 / fps;
+        
+        const percent = Math.min(100, Math.round((t / totalDuration) * 100));
+        DOM.exportProgressBar.style.width = percent + '%';
+        DOM.exportPercent.textContent = percent + '%';
+        
+        if (t >= totalDuration) {
+            clearInterval(recordInterval);
+            DOM.exportStatusText.textContent = "Processing video file...";
+            state.recorder.stop();
+        }
+    }, intervalMs);
+}
+
+function cancelExportingVideo() {
+    if (state.recorder && state.recorder.state !== 'inactive') {
+        state.recorder.stop();
+    }
+    audio.stop();
+    finishExportingState();
+}
+
+function finishExportingState() {
+    state.isRecording = false;
+    DOM.exportProgressArea.style.display = 'none';
+    DOM.btnStartExport.style.display = 'block';
+    DOM.btnCancelExport.style.display = 'none';
+    DOM.backTo3.disabled = false;
+}
+
+function configureAudioEditorSliders(duration) {
+    if (!DOM.customAudioEditor) return;
+    DOM.customAudioEditor.style.display = 'flex';
+    DOM.audioFilenameBadge.textContent = state.customAudioFilename || 'Custom Audio';
+    DOM.audioFilenameBadge.title = state.customAudioFilename || '';
+    
+    DOM.audioStartSlider.max = duration;
+    DOM.audioStartSlider.value = state.customAudioStart;
+    DOM.audioStartVal.textContent = state.customAudioStart.toFixed(1) + 's';
+    
+    DOM.audioEndSlider.max = duration;
+    DOM.audioEndSlider.value = state.customAudioEnd !== null ? state.customAudioEnd : duration;
+    DOM.audioEndVal.textContent = (state.customAudioEnd !== null ? state.customAudioEnd : duration).toFixed(1) + 's';
+}
