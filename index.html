@@ -322,6 +322,16 @@
                                     <input type="range" id="cutout-hold" min="10" max="80" step="5" value="35" class="custom-slider">
                                 </div>
 
+                                <div class="control-slider-group">
+                                    <label for="video-aspect-ratio" style="font-size: 12px; font-weight: 700; margin-bottom: 6px; display: block; color: var(--text-main);">Video Aspect Ratio:</label>
+                                    <select id="video-aspect-ratio" class="custom-select">
+                                        <option value="9-16" selected>📱 Vertical / Reels (9:16)</option>
+                                        <option value="16-9">🖥️ Landscape / YouTube (16:9)</option>
+                                        <option value="1-1">⏹️ Square / Post (1:1)</option>
+                                        <option value="4-5">📸 Portrait / Instagram (4:5)</option>
+                                    </select>
+                                </div>
+
                                 <div class="control-row-grid" style="display: none;">
                                     <div class="input-group">
                                         <label for="cutout-border-type">Cutout Border:</label>
@@ -520,6 +530,6 @@
     </div>
 
     <!-- JavaScript Files (ES Module structure) -->
-    <script type="module" src="app.js"></script>
+    <script type="module" src="app.js?v=3"></script>
 </body>
 </html>

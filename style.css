@@ -1517,4 +1517,112 @@ body {
     border: 1px solid var(--primary) !important;
 }
 
+/* Segmented Control Button Styling */
+.segment-btn {
+    flex: 1;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 11px;
+    font-weight: 600;
+    padding: 6px 10px;
+    border-radius: calc(var(--radius-sm) - 2px);
+    cursor: pointer;
+    transition: var(--transition);
+    text-align: center;
+    white-space: nowrap;
+}
 
+.segment-btn:hover {
+    color: var(--text-main);
+}
+
+.segment-btn.active {
+    background: var(--primary-gradient);
+    color: var(--text-main);
+    box-shadow: 0 2px 8px var(--primary-glow);
+}
+
+.photo-item .ratio-warning-badge {
+    position: absolute;
+    bottom: 4px;
+    right: 4px;
+    font-size: 9px;
+    background-color: rgba(251, 133, 0, 0.85); /* amber warning color */
+    color: #fff;
+    padding: 2px 6px;
+    border-radius: 10px;
+    font-weight: 600;
+    backdrop-filter: blur(4px);
+}
+
+/* Dynamic Aspect Ratio Phone/Device Frame Styles */
+.phone-frame {
+    transition: width 0.3s ease, height 0.3s ease, border-radius 0.3s ease;
+}
+
+.phone-frame.ratio-9-16 {
+    width: 360px;
+    height: 710px;
+    border-radius: 48px;
+}
+.phone-frame.ratio-9-16 .phone-camera {
+    display: block;
+}
+
+.phone-frame.ratio-16-9 {
+    width: 720px;
+    height: 450px;
+    border-radius: 24px;
+}
+.phone-frame.ratio-16-9 .phone-camera {
+    display: none;
+}
+
+.phone-frame.ratio-1-1 {
+    width: 500px;
+    height: 500px;
+    border-radius: 24px;
+}
+.phone-frame.ratio-1-1 .phone-camera {
+    display: none;
+}
+
+.phone-frame.ratio-4-5 {
+    width: 440px;
+    height: 550px;
+    border-radius: 24px;
+}
+.phone-frame.ratio-4-5 .phone-camera {
+    display: none;
+}
+
+
+
+
+
+/* ─── Toast Notification ─────────────────────────────────────── */
+#app-toast {
+    position: fixed;
+    bottom: 32px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: rgba(30, 15, 60, 0.95);
+    border: 1px solid rgba(157, 78, 221, 0.4);
+    color: #e0d7ff;
+    padding: 12px 22px;
+    border-radius: 40px;
+    font-size: 13px;
+    font-weight: 600;
+    backdrop-filter: blur(12px);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(157,78,221,0.15);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease, transform 0.25s ease;
+    z-index: 99999;
+    white-space: nowrap;
+}
+#app-toast.visible {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}

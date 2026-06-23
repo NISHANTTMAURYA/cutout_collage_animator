@@ -185,6 +185,9 @@ export class CollageRenderer {
         const slide = this.slides[slideIdx];
         const prevSlide = this.slides[(slideIdx - 1 + this.slides.length) % this.slides.length];
         
+        // Guard: skip draw if slide image not ready
+        if (!slide || !slide.img) return;
+        
         this.ctx.save();
         this.drawCleanSlide(slide, prevSlide, localTime, slideIdx, t);
         this.ctx.restore();
@@ -208,6 +211,7 @@ export class CollageRenderer {
     }
 
     drawCleanSlide(slide, prevSlide, localTime, slideIdx, t) {
+        if (!slide || !slide.img) return; // Safety guard
         const w = this.canvas.width;
         const h = this.canvas.height;
         const cx = w / 2;
@@ -248,7 +252,7 @@ export class CollageRenderer {
 
         // ── LAYER 1: Previous slide's COMPLETE full photo ─────────────────
         // Shown as the base canvas for every slide except first-ever pass.
-        if (this.slides.length > 1 && !isFirstPass) {
+        if (this.slides.length > 1 && !isFirstPass && prevSlide && prevSlide.img) {
             const pa = prevSlide.img.naturalWidth / prevSlide.img.naturalHeight;
             let pw = w, ph = w / pa;
             if (ph > h) { ph = h; pw = ph * pa; }
@@ -261,7 +265,7 @@ export class CollageRenderer {
 
         // ── LAYER 2: Current slide CUTOUT — fades in quickly on top ───────
         // Stays visible until the background fully covers it (bgAlpha = 1).
-        if (bgAlpha < 1.0 && cutoutAlpha > 0.0) {
+        if (bgAlpha < 1.0 && cutoutAlpha > 0.0 && slide.cutout) {
             this.ctx.save();
             this.ctx.globalAlpha = cutoutAlpha;
             this.ctx.translate(cx, cy);

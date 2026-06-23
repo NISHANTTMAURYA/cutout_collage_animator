@@ -29,6 +29,13 @@ export class AudioEngine {
         this.customAudioStart = 0.0;
         this.customAudioEnd = null;
         
+        // Raw bytes for reliable cross-reload storage (Uint8Array, avoids Blob GC issues)
+        this._rawBytes = null;
+        
+        // Beat detection results
+        this.detectedBeatTimes = []; // seconds of each detected beat
+        this.detectedBPM = 120;
+        
         // Beat Sync metrics
         this.lastBeatTime = 0;
         this.beatDuration = 0;
@@ -48,8 +55,17 @@ export class AudioEngine {
         this.masterGain.connect(this.ctx.destination);
         
         // Create recorder stream destination (for MediaRecorder output)
-        this.recorderDestination = this.ctx.createMediaStreamAudioDestination();
-        this.masterGain.connect(this.recorderDestination);
+        if (typeof this.ctx.createMediaStreamDestination === 'function') {
+            this.recorderDestination = this.ctx.createMediaStreamDestination();
+            this.masterGain.connect(this.recorderDestination);
+        } else if (typeof this.ctx.createMediaStreamAudioDestination === 'function') {
+            // Fallback for non-standard/deprecated names if present
+            this.recorderDestination = this.ctx.createMediaStreamAudioDestination();
+            this.masterGain.connect(this.recorderDestination);
+        } else {
+            console.warn("[AudioEngine] createMediaStreamDestination is not supported in this browser/environment.");
+            this.recorderDestination = null;
+        }
         console.log("[AudioEngine] Web Audio initialized. Volume:", this.volume);
     }
 
@@ -131,31 +147,172 @@ export class AudioEngine {
 
     getAudioStream() {
         this.init();
-        return this.recorderDestination.stream;
+        return this.recorderDestination ? this.recorderDestination.stream : null;
     }
 
     // --- Custom Audio File Loading ---
-    loadCustomAudioFile(file) {
+    loadCustomAudioFile(fileOrBuffer) {
         return new Promise((resolve, reject) => {
             this.init();
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const arrayBuffer = e.target.result;
-                this.ctx.decodeAudioData(arrayBuffer, (decodedBuffer) => {
+            
+            const processBuffer = (arrayBuffer) => {
+                // Store raw bytes for reliable persistence (copy before neutering by decodeAudioData)
+                this._rawBytes = new Uint8Array(arrayBuffer.slice(0));
+                
+                // decodeAudioData neuters the arrayBuffer — we pass a copy
+                const bufferCopy = arrayBuffer.slice(0);
+                this.ctx.decodeAudioData(bufferCopy, (decodedBuffer) => {
                     this.customAudioBuffer = decodedBuffer;
                     this.setTheme('custom');
-                    // Estimate BPM roughly or set to standard 120
-                    this.bpm = 120;
-                    this.beatDuration = 60 / this.bpm;
                     this.customAudioStart = 0.0;
                     this.customAudioEnd = decodedBuffer.duration;
+                    
+                    // Run beat detection asynchronously (doesn't block playback)
+                    this.detectBeats(decodedBuffer).then(({ bpm, beatTimes }) => {
+                        this.detectedBPM = bpm;
+                        this.detectedBeatTimes = beatTimes;
+                        this.bpm = bpm;
+                        this.beatDuration = 60 / bpm;
+                        console.log(`[AudioEngine] Beat detection: ${bpm.toFixed(1)} BPM, ${beatTimes.length} beats`);
+                        // Notify app that beat detection is done so it can re-sync if needed
+                        window.dispatchEvent(new CustomEvent('audio-beat-detected', { detail: { bpm, beatTimes } }));
+                    }).catch(() => {
+                        // Fallback to 120 BPM
+                        this.bpm = 120;
+                        this.beatDuration = 60 / 120;
+                    });
+                    
                     resolve(decodedBuffer);
                 }, (err) => {
                     reject(err);
                 });
             };
-            reader.readAsArrayBuffer(file);
+            
+            if (fileOrBuffer instanceof Uint8Array) {
+                // Stored as Uint8Array from IndexedDB — convert to ArrayBuffer
+                processBuffer(fileOrBuffer.buffer.slice(fileOrBuffer.byteOffset, fileOrBuffer.byteOffset + fileOrBuffer.byteLength));
+            } else if (fileOrBuffer instanceof ArrayBuffer) {
+                processBuffer(fileOrBuffer);
+            } else {
+                // File object
+                const reader = new FileReader();
+                reader.onload = (e) => processBuffer(e.target.result);
+                reader.onerror = (e) => reject(e);
+                reader.readAsArrayBuffer(fileOrBuffer);
+            }
         });
+    }
+
+    /**
+     * Detect beats using OfflineAudioContext + energy onset detection.
+     * Returns { bpm, beatTimes } where beatTimes is an array of beat positions in seconds.
+     * This is an industry-standard approach: high-pass filter → rectify → window energy → find peaks.
+     */
+    async detectBeats(audioBuffer) {
+        const sampleRate = audioBuffer.sampleRate;
+        const numChannels = audioBuffer.numberOfChannels;
+        const length = audioBuffer.length;
+        
+        // Use OfflineAudioContext to process the audio offline
+        const offlineCtx = new OfflineAudioContext(1, length, sampleRate);
+        
+        // Create buffer source
+        const source = offlineCtx.createBufferSource();
+        source.buffer = audioBuffer;
+        
+        // High-pass filter at 150Hz to isolate mid-high frequencies (best for beat detection)
+        const highpass = offlineCtx.createBiquadFilter();
+        highpass.type = 'highpass';
+        highpass.frequency.value = 150;
+        
+        source.connect(highpass);
+        highpass.connect(offlineCtx.destination);
+        source.start(0);
+        
+        const renderedBuffer = await offlineCtx.startRendering();
+        const rawData = renderedBuffer.getChannelData(0);
+        
+        // Step 1: Full-wave rectify
+        const rectified = new Float32Array(rawData.length);
+        for (let i = 0; i < rawData.length; i++) {
+            rectified[i] = Math.abs(rawData[i]);
+        }
+        
+        // Step 2: Compute energy in overlapping windows (beat tracking resolution ~10ms)
+        const windowMs = 10; // 10ms windows
+        const windowSize = Math.floor(sampleRate * windowMs / 1000);
+        const hopSize = Math.floor(windowSize / 2);
+        const energies = [];
+        
+        for (let i = 0; i < rectified.length - windowSize; i += hopSize) {
+            let energy = 0;
+            for (let j = 0; j < windowSize; j++) {
+                energy += rectified[i + j] * rectified[i + j];
+            }
+            energies.push(energy / windowSize);
+        }
+        
+        // Step 3: Onset detection — find local maxima with adaptive threshold
+        const localWindow = 43; // ~430ms local context at 10ms/hop
+        const threshold = 1.5; // Peak must be 1.5x local median
+        const onsets = []; // in seconds
+        
+        for (let i = localWindow; i < energies.length - localWindow; i++) {
+            const local = energies.slice(i - localWindow, i + localWindow);
+            const sorted = [...local].sort((a, b) => a - b);
+            const median = sorted[Math.floor(sorted.length / 2)];
+            const localMedian = median || 1e-9;
+            
+            if (energies[i] > localMedian * threshold) {
+                // Check it's a local maximum
+                let isPeak = true;
+                for (let k = i - 3; k <= i + 3; k++) {
+                    if (k !== i && energies[k] >= energies[i]) {
+                        isPeak = false;
+                        break;
+                    }
+                }
+                if (isPeak) {
+                    const timeSeconds = (i * hopSize) / sampleRate;
+                    onsets.push(timeSeconds);
+                }
+            }
+        }
+        
+        // Step 4: Estimate BPM from inter-onset intervals (IOIs)
+        let estimatedBPM = 120;
+        if (onsets.length >= 2) {
+            const iois = [];
+            for (let i = 1; i < onsets.length; i++) {
+                const diff = onsets[i] - onsets[i - 1];
+                if (diff > 0.2 && diff < 2.0) { // Only consider IOIs in 30-300 BPM range
+                    iois.push(diff);
+                }
+            }
+            
+            if (iois.length > 0) {
+                // Find mode (most common IOI via histogram)
+                iois.sort((a, b) => a - b);
+                const median = iois[Math.floor(iois.length / 2)];
+                const candidateBPM = 60 / median;
+                
+                // Bring into typical BPM range (60-200)
+                let bpm = candidateBPM;
+                while (bpm < 60) bpm *= 2;
+                while (bpm > 200) bpm /= 2;
+                estimatedBPM = bpm;
+            }
+        }
+        
+        // Step 5: Build regular beat grid from estimated BPM and first onset
+        const beatInterval = 60 / estimatedBPM;
+        const firstBeat = onsets.length > 0 ? onsets[0] : 0;
+        const beatTimes = [];
+        for (let t = firstBeat; t < audioBuffer.duration; t += beatInterval) {
+            beatTimes.push(Math.round(t * 1000) / 1000);
+        }
+        
+        return { bpm: estimatedBPM, beatTimes };
     }
 
     playCustomBuffer() {
