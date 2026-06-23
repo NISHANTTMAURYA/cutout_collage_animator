@@ -6,6 +6,8 @@ export class CollageRenderer {
     constructor(canvasElement) {
         this.canvas = canvasElement;
         this.ctx = this.canvas.getContext('2d');
+        this.ctx.imageSmoothingEnabled = true;
+        this.ctx.imageSmoothingQuality = 'high';
         
         this.slides = []; // Array of { img, mask, cutout, text }
         this.activeStyle = 'clean';

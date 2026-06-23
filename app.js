@@ -1,6 +1,6 @@
-import { detectSubject, smoothMask, setModelStatusCallback, loadModel } from './saliency.js?v=3';
-import { AudioEngine } from './audio.js?v=3';
-import { CollageRenderer } from './renderer.js?v=3';
+import { detectSubject, smoothMask, setModelStatusCallback, loadModel } from './saliency.js?v=7';
+import { AudioEngine } from './audio.js?v=7';
+import { CollageRenderer } from './renderer.js?v=7';
 import {
     openDb,
     getProjects,
@@ -9,7 +9,7 @@ import {
     deleteProject,
     getSlides,
     saveSlides
-} from './db.js?v=3';
+} from './db.js?v=7';
 
 // Application State
 const state = {
@@ -725,7 +725,7 @@ async function loadProject(projectId) {
                 img: img,
                 mask: mask,
                 cutout: null,
-                text: dbSlide.text,
+                text: dbSlide.text === 'Memory Moment' ? '' : dbSlide.text,
                 rotation: dbSlide.rotation
             });
         }
@@ -2146,7 +2146,7 @@ function handleFiles(files) {
                         img: img,
                         mask: mask,
                         cutout: null, // precomputed in renderer
-                        text: 'Memory Moment',
+                        text: '',
                         rotation: (Math.random() - 0.5) * 8 * Math.PI / 180 // Random -4 to +4 degrees
                     });
                     onPhotosUpdated();
@@ -2712,16 +2712,27 @@ async function startExportingVideo() {
     state.recordedChunks = [];
     let usingFallbackOnlyVideo = false;
     
+    // Configure high-quality options (15 Mbps for 1080p, 8 Mbps for 720p, 320 kbps for audio)
+    const targetVideoBitrate = isHighRes ? 15000000 : 8000000;
+    const targetAudioBitrate = 320000;
+    
+    const combinedOptions = {};
+    if (mimeType) combinedOptions.mimeType = mimeType;
+    combinedOptions.videoBitsPerSecond = targetVideoBitrate;
+    combinedOptions.audioBitsPerSecond = targetAudioBitrate;
+    
+    const videoOnlyOptions = {};
+    if (mimeType) videoOnlyOptions.mimeType = mimeType;
+    videoOnlyOptions.videoBitsPerSecond = targetVideoBitrate;
+    
     try {
-        const options = mimeType ? { mimeType } : undefined;
-        state.recorder = new MediaRecorder(mergedStream, options);
+        state.recorder = new MediaRecorder(mergedStream, combinedOptions);
     } catch (e) {
         console.warn("[export] Combined audio+video MediaRecorder failed, attempting fallback:", e);
         // Fallback 1: Try video-only stream
         try {
             const videoOnlyStream = new MediaStream(canvasStream.getVideoTracks());
-            const options = mimeType ? { mimeType } : undefined;
-            state.recorder = new MediaRecorder(videoOnlyStream, options);
+            state.recorder = new MediaRecorder(videoOnlyStream, videoOnlyOptions);
             usingFallbackOnlyVideo = true;
         } catch (e2) {
             console.warn("[export] Video-only MediaRecorder with mimeType failed, falling back to default options:", e2);
@@ -2739,6 +2750,39 @@ async function startExportingVideo() {
             }
         }
     }
+
+    const processAndDownload = (recordedChunks, recorderMimeType) => {
+        const videoBlob = new Blob(recordedChunks, { type: recorderMimeType || 'video/webm' });
+        const fallbackURL = URL.createObjectURL(videoBlob);
+        
+        DOM.exportStatusText.textContent = "Optimizing video...";
+        showToast("🎬 Optimizing video quality & compatibility...");
+        
+        fetch('/convert', {
+            method: 'POST',
+            body: videoBlob
+        })
+        .then(response => {
+            if (!response.ok) throw new Error("Server conversion failed");
+            return response.blob();
+        })
+        .then(convertedBlob => {
+            const videoURL = URL.createObjectURL(convertedBlob);
+            DOM.btnDownloadVideo.href = videoURL;
+            DOM.btnDownloadVideo.download = `scrapbook_collage_${Date.now()}.mp4`; // Always download standard .mp4
+            DOM.btnDownloadVideo.style.display = 'flex';
+            DOM.exportStatusText.textContent = "Video ready!";
+            finishExportingState();
+        })
+        .catch(err => {
+            console.warn("[export] Optimization failed, falling back to raw recording:", err);
+            DOM.btnDownloadVideo.href = fallbackURL;
+            DOM.btnDownloadVideo.download = `scrapbook_collage_${Date.now()}${fileExtension}`;
+            DOM.btnDownloadVideo.style.display = 'flex';
+            DOM.exportStatusText.textContent = "Video ready (raw fallback)";
+            finishExportingState();
+        });
+    };
 
     state.recorder.ondataavailable = (event) => {
         if (event.data && event.data.size > 0) {
@@ -2758,15 +2802,7 @@ async function startExportingVideo() {
         
         if (!state.isRecording) return; // recording aborted
         
-        const videoBlob = new Blob(state.recordedChunks, { type: state.recorder.mimeType || 'video/webm' });
-        const videoURL = URL.createObjectURL(videoBlob);
-        
-        // Show download option
-        DOM.btnDownloadVideo.href = videoURL;
-        DOM.btnDownloadVideo.download = `scrapbook_collage_${Date.now()}${fileExtension}`;
-        DOM.btnDownloadVideo.style.display = 'flex';
-        
-        finishExportingState();
+        processAndDownload(state.recordedChunks, state.recorder.mimeType);
     };
     
     // Start recording with robust runtime starting fallback
@@ -2783,8 +2819,7 @@ async function startExportingVideo() {
         // Attempt fallback to video-only
         try {
             const videoOnlyStream = new MediaStream(canvasStream.getVideoTracks());
-            const options = mimeType ? { mimeType } : undefined;
-            state.recorder = new MediaRecorder(videoOnlyStream, options);
+            state.recorder = new MediaRecorder(videoOnlyStream, videoOnlyOptions);
             state.recorder.ondataavailable = (event) => {
                 if (event.data && event.data.size > 0) {
                     state.recordedChunks.push(event.data);
@@ -2796,12 +2831,7 @@ async function startExportingVideo() {
                     tempCanvas.parentNode.removeChild(tempCanvas);
                 }
                 if (!state.isRecording) return;
-                const videoBlob = new Blob(state.recordedChunks, { type: state.recorder.mimeType || 'video/webm' });
-                const videoURL = URL.createObjectURL(videoBlob);
-                DOM.btnDownloadVideo.href = videoURL;
-                DOM.btnDownloadVideo.download = `scrapbook_collage_${Date.now()}${fileExtension}`;
-                DOM.btnDownloadVideo.style.display = 'flex';
-                finishExportingState();
+                processAndDownload(state.recordedChunks, state.recorder.mimeType);
             };
             state.recorder.start();
             usingFallbackOnlyVideo = true;
@@ -2822,12 +2852,7 @@ async function startExportingVideo() {
                         tempCanvas.parentNode.removeChild(tempCanvas);
                     }
                     if (!state.isRecording) return;
-                    const videoBlob = new Blob(state.recordedChunks, { type: state.recorder.mimeType || 'video/webm' });
-                    const videoURL = URL.createObjectURL(videoBlob);
-                    DOM.btnDownloadVideo.href = videoURL;
-                    DOM.btnDownloadVideo.download = `scrapbook_collage_${Date.now()}${fileExtension}`;
-                    DOM.btnDownloadVideo.style.display = 'flex';
-                    finishExportingState();
+                    processAndDownload(state.recordedChunks, state.recorder.mimeType);
                 };
                 state.recorder.start();
                 usingFallbackOnlyVideo = true;

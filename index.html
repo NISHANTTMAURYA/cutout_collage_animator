@@ -380,15 +380,15 @@
                         <div class="input-group">
                             <label for="export-resolution">Resolution:</label>
                             <select id="export-resolution" class="custom-select">
-                                <option value="720">720p HD (720x1280, Recommended)</option>
-                                <option value="1080">1080p Full HD (1080x1920, Slow)</option>
+                                <option value="1080" selected>1080p Full HD (1080x1920, Highest Quality)</option>
+                                <option value="720">720p HD (720x1280, Faster Render)</option>
                             </select>
                         </div>
                         <div class="input-group">
                             <label for="export-format">Format:</label>
                             <select id="export-format" class="custom-select">
-                                <option value="auto">WebM (Fast, High Quality)</option>
-                                <option value="mp4">MP4 (Widest Compatibility, Safari/iOS)</option>
+                                <option value="mp4" selected>MP4 (Highest Compatibility, QuickTime/Reels)</option>
+                                <option value="auto">WebM (Fast Render, High Quality)</option>
                             </select>
                         </div>
                     </div>
@@ -483,7 +483,7 @@
                 </div>
                 <button class="preview-nav-btn next" id="btn-preview-next">❯</button>
             </div>
-            <p class="preview-modal-caption" id="preview-modal-caption">Memory Moment</p>
+            <p class="preview-modal-caption" id="preview-modal-caption">Photo Caption</p>
 
             <!-- Editor Controls (Visible when AI Cutout tab is active) -->
             <div id="preview-modal-editor-controls" style="display: none; margin-top: 12px; flex-direction: column; gap: 8px; border-top: 1px solid var(--border-color); padding-top: 12px;">
@@ -530,6 +530,6 @@
     </div>
 
     <!-- JavaScript Files (ES Module structure) -->
-    <script type="module" src="app.js?v=3"></script>
+    <script type="module" src="app.js?v=7"></script>
 </body>
 </html>
