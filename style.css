@@ -34,15 +34,15 @@
 
 /* ─── Design Tokens ─────────────────────────────────────────── */
 :root {
-  /* App ground colour – light airy lavender (straight from ref image) */
-  --bg-app:       #bfbddc;
+  /* App ground colour – solid bright cream */
+  --bg-app:       #f9f6f0;
   --bg-preview:   #f0f0f5;
 
-  /* Panel / card surfaces – very white */
-  --panel:        #ffffff;
-  --panel-inner:  #f8f7fc;  /* slightly off-white for nested areas */
-  --card-shadow:  0 2px 14px rgba(80, 70, 150, 0.06), 0 1px 3px rgba(80, 70, 150, 0.03);
-  --card-shadow-lg: 0 6px 30px rgba(80, 70, 150, 0.12), 0 2px 4px rgba(80, 70, 150, 0.05);
+  /* Panel / card surfaces – frosted translucent white glass adapted for cream ground */
+  --panel:        rgba(255, 255, 255, 0.35);
+  --panel-inner:  rgba(255, 255, 255, 0.18);
+  --card-shadow:  0 12px 40px rgba(80, 70, 150, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.45);
+  --card-shadow-lg: 0 20px 50px rgba(80, 70, 150, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.6);
 
   /* Accent – medium purple, not too vivid */
   --accent:          #7c6fdb;
@@ -53,12 +53,12 @@
   --accent-subtle:   rgba(124, 111, 219, 0.07);
   --accent-tint:     rgba(124, 111, 219, 0.12);
 
-  /* Text */
+  /* Text – original purple text values */
   --text-hi:    #1c1740;
   --text-mid:   #5b5777;
   --text-lo:    #9e9ab8;
 
-  /* Borders */
+  /* Borders – original borders */
   --border:        rgba(124, 111, 219, 0.10);
   --border-md:     rgba(124, 111, 219, 0.18);
   --border-strong: rgba(124, 111, 219, 0.30);
@@ -68,7 +68,7 @@
   --danger:     #f43f5e;
   --warning:    #f59e0b;
 
-  /* Radius scale */
+  /* Radius scale – original curves */
   --r-xs:  6px;
   --r-sm:  12px;
   --r-md:  16px;
@@ -102,6 +102,15 @@ html, body {
 body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   background-color: var(--bg-app);
+  /* Premium subtle polka dot pattern to make glass backdrop blur visually obvious */
+  --dot-color: rgba(124, 111, 219, 0.12);
+  --dot-size: 1.5px;
+  --dot-space: 24px;
+  background-image: 
+    radial-gradient(circle, var(--dot-color) var(--dot-size), transparent calc(var(--dot-size) + 0.5px)),
+    radial-gradient(circle, var(--dot-color) var(--dot-size), transparent calc(var(--dot-size) + 0.5px));
+  background-size: var(--dot-space) var(--dot-space);
+  background-position: 0 0, calc(var(--dot-space) / 2) calc(var(--dot-space) / 2);
   color: var(--text-hi);
   overflow: hidden;
   -webkit-font-smoothing: antialiased;
@@ -133,7 +142,7 @@ input, textarea, [contenteditable="true"], .caption-input {
   justify-content: space-between;
   align-items: center;
   padding: 0 8px;
-  color: rgba(28, 23, 64, 0.65);
+  color: rgba(255, 255, 255, 0.85);
   font-family: 'Space Grotesk', sans-serif;
   font-weight: 700;
   font-size: 13px;
@@ -150,6 +159,9 @@ input, textarea, [contenteditable="true"], .caption-input {
   border-radius: 30px;
   box-shadow: var(--card-shadow);
   color: var(--text-hi);
+  border: 1px solid var(--border-md);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
 }
 
 .logo-text {
@@ -234,7 +246,7 @@ input, textarea, [contenteditable="true"], .caption-input {
   min-height: 0;
 }
 
-/* ─── White Rounded Cards ────────────────────────────────────── */
+/* ─── Glassmorphic Rounded Cards ──────────────────────────────── */
 .editor-card {
   background: var(--panel);
   border-radius: var(--r-md);
@@ -242,7 +254,9 @@ input, textarea, [contenteditable="true"], .caption-input {
   display: flex;
   flex-direction: column;
   min-height: 0;
-  border: 1px solid rgba(124, 111, 219, 0.05);
+  border: 1px solid var(--border-md);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
 }
 
 .card-header {
@@ -503,6 +517,9 @@ input, textarea, [contenteditable="true"], .caption-input {
   border-radius: 40px;
   box-shadow: var(--card-shadow);
   gap: 6px;
+  border: 1px solid var(--border-md);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
 }
 
 .tb-btn {
@@ -572,7 +589,9 @@ input, textarea, [contenteditable="true"], .caption-input {
   justify-content: center;
   padding: 24px;
   min-height: 0;
-  border: 1px solid rgba(124, 111, 219, 0.05);
+  border: 1px solid var(--border-md);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
 }
 
 .preview-canvas-container {
@@ -651,6 +670,9 @@ input, textarea, [contenteditable="true"], .caption-input {
   width: 90%;
   max-width: 500px;
   gap: 16px;
+  border: 1px solid var(--border-md);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
 }
 
 .hud-controls-left {
@@ -1177,7 +1199,9 @@ input, textarea, [contenteditable="true"], .caption-input {
   flex-direction: column;
   overflow: hidden;
   min-width: 0;
-  border: 1px solid rgba(124, 111, 219, 0.05);
+  border: 1px solid var(--border-md);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
 }
 
 .timeline-header-bar {
@@ -1257,8 +1281,8 @@ input, textarea, [contenteditable="true"], .caption-input {
 
 .track-info {
   width: 130px;
-  background: var(--panel-inner);
-  border-right: 1px solid rgba(124, 111, 219, 0.08);
+  background: #ffffff; /* Solid opaque white to block cells scrolling underneath it */
+  border-right: 1px solid rgba(124, 111, 219, 0.16);
   display: flex;
   align-items: center;
   padding: 0 12px;
@@ -1375,7 +1399,7 @@ input, textarea, [contenteditable="true"], .caption-input {
   justify-content: space-between;
   align-items: center;
   padding: 0 8px;
-  color: rgba(28, 23, 64, 0.4);
+  color: rgba(255, 255, 255, 0.6);
   font-family: 'Space Grotesk', sans-serif;
   font-weight: 600;
   font-size: 10.5px;
@@ -1395,9 +1419,9 @@ input, textarea, [contenteditable="true"], .caption-input {
 .preview-modal-overlay {
   position: absolute;
   inset: 0;
-  background: rgba(28, 23, 64, 0.32);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
+  background: rgba(15, 11, 36, 0.45);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 .preview-modal-content {
@@ -1411,7 +1435,9 @@ input, textarea, [contenteditable="true"], .caption-input {
   flex-direction: column;
   padding: 20px;
   z-index: 101;
-  border: 1px solid rgba(124, 111, 219, 0.1);
+  border: 1px solid var(--border-md);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
 }
 
 .preview-modal-close {
@@ -1703,4 +1729,39 @@ input, textarea, [contenteditable="true"], .caption-input {
   display: block;
   color: var(--text-lo);
   opacity: 0.6;
+}
+
+/* ─── Shared Glassmorphism Cards & Gradient Highlight Borders ─── */
+.editor-card,
+.preview-screen-card,
+.timeline-card,
+.preview-modal-content {
+  position: relative;
+  overflow: hidden;
+  backdrop-filter: blur(35px) saturate(200%) !important;
+  -webkit-backdrop-filter: blur(35px) saturate(200%) !important;
+  background: var(--panel) !important;
+  border: none !important; /* Remove standard borders to use the gradient pseudo-element border */
+  box-shadow: var(--card-shadow) !important;
+}
+
+/* Gradient highlight border mimicking user reference image */
+.editor-card::before,
+.preview-screen-card::before,
+.timeline-card::before,
+.preview-modal-content::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1.5px; /* Border thickness */
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.75), rgba(255, 255, 255, 0.1) 40%, transparent 60%);
+  -webkit-mask: 
+     linear-gradient(#fff 0 0) content-box, 
+     linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  -webkit-mask-composite: destination-out;
+  mask-composite: exclude;
+  pointer-events: none;
+  z-index: 10;
 }
