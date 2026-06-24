@@ -990,35 +990,46 @@ input, textarea, [contenteditable="true"], .caption-input {
   font-family: 'Space Grotesk', sans-serif;
 }
 /* Set All toolbar */
-.set-all-toolbar {
+/* ── Beat Timing Toolbar ─────────────────────────────────── */
+.beat-toolbar {
   display: flex;
-  align-items: center;
-  flex-wrap: wrap;
+  flex-direction: column;
   gap: 6px;
   background: var(--panel-bg);
   border: 1.5px solid var(--border-md);
   border-radius: var(--r-sm);
-  padding: 6px 10px;
+  padding: 8px 10px;
 }
-.set-all-label {
-  font-size: 10px;
+.beat-toolbar-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.beat-toolbar-vary-row {
+  border-top: 1px solid var(--border);
+  padding-top: 6px;
+}
+.beat-toolbar-label {
+  font-size: 9.5px;
   font-weight: 800;
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  margin-right: 2px;
+  width: 46px;
+  flex-shrink: 0;
 }
-.set-all-presets {
+.beat-toolbar-btns {
   display: flex;
   gap: 4px;
 }
-.set-all-custom {
+.beat-toolbar-custom {
   display: flex;
   align-items: center;
   gap: 3px;
   margin-left: auto;
 }
-.set-all-custom input[type="number"] {
+.beat-toolbar-custom input[type="number"] {
   width: 44px;
   background: var(--panel-inner);
   border: 1px solid var(--border-md);
@@ -1029,8 +1040,142 @@ input, textarea, [contenteditable="true"], .caption-input {
   text-align: center;
   -moz-appearance: textfield;
 }
-.set-all-custom input[type="number"]::-webkit-inner-spin-button,
-.set-all-custom input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; }
+.beat-toolbar-custom input[type="number"]::-webkit-inner-spin-button,
+.beat-toolbar-custom input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; }
+/* Pattern input */
+.beat-pattern-wrap {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+#beat-pattern-input {
+  width: 90px;
+  background: var(--panel-inner);
+  border: 1px solid var(--border-md);
+  border-radius: 5px;
+  color: var(--text-hi);
+  font-size: 11px;
+  padding: 3px 6px;
+  font-family: 'JetBrains Mono', monospace, sans-serif;
+}
+#beat-pattern-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+/* Detect from Music button — green tint */
+.set-all-detect {
+  background: rgba(34, 197, 94, 0.12);
+  border-color: rgba(34, 197, 94, 0.4);
+  color: #4ade80;
+}
+.set-all-detect:hover:not(:disabled) {
+  background: rgba(34, 197, 94, 0.22);
+  border-color: #4ade80;
+  color: #86efac;
+}
+.set-all-detect:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+/* Beat group selector */
+.beat-group-wrap {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.beat-group-select {
+  background: var(--panel-inner);
+  border: 1px solid var(--border-md);
+  border-radius: 5px;
+  color: var(--text-hi);
+  font-size: 11px;
+  padding: 2px 6px;
+  cursor: pointer;
+}
+/* Status badge */
+.beat-detect-status {
+  font-size: 10px;
+  font-weight: 700;
+  color: #4ade80;
+  white-space: nowrap;
+}
+/* Help panel styles */
+.beat-toolbar-help-row {
+  border-top: 1px dashed var(--border-md);
+  padding-top: 8px;
+  flex-direction: column;
+  align-items: flex-start !important;
+  width: 100%;
+}
+.help-toggle-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  padding: 2px 0 6px 0;
+  transition: color 0.15s;
+}
+.help-toggle-btn:hover {
+  color: var(--accent);
+}
+.beat-help-content {
+  width: 100%;
+  animation: beatHelpSlideIn 0.22s ease-out;
+}
+.beat-help-content.hidden {
+  display: none;
+}
+.help-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  background: var(--panel-inner);
+  border: 1px solid var(--border-md);
+  border-radius: 6px;
+  padding: 8px 10px;
+}
+.help-col {
+  font-size: 10.5px;
+  line-height: 1.4;
+  color: var(--text-mid);
+}
+.help-col strong {
+  color: var(--text-hi);
+  font-weight: 600;
+}
+.help-title {
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-hi);
+}
+.help-text {
+  font-size: 10.5px;
+  color: var(--text-muted);
+  line-height: 1.35;
+}
+@keyframes beatHelpSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+/* Shared button styles */
 .set-all-btn {
   background: var(--panel-inner);
   border: 1.5px solid var(--border-md);
@@ -1059,6 +1204,7 @@ input, textarea, [contenteditable="true"], .caption-input {
   color: #fff;
 }
 .set-all-reset {
+  margin-left: auto;
   color: var(--text-muted);
 }
 .set-all-reset:hover {
@@ -1066,6 +1212,7 @@ input, textarea, [contenteditable="true"], .caption-input {
   border-color: #f55;
   color: #f55;
 }
+/* ─────────────────────────────────────────────────────────── */
 .captions-list {
   display: flex;
   flex-direction: column;
@@ -1073,6 +1220,7 @@ input, textarea, [contenteditable="true"], .caption-input {
   max-height: 180px;
   overflow-y: auto;
 }
+
 
 .caption-editor-item {
   background: var(--panel-inner);

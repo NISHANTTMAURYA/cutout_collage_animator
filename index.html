@@ -323,22 +323,69 @@
                                     <div class="text-captions-section">
                                         <h4>Customize Captions &amp; Timing</h4>
 
-                                        <!-- Set All Toolbar -->
-                                        <div class="set-all-toolbar" id="set-all-toolbar">
-                                            <span class="set-all-label">Set All</span>
-                                            <div class="set-all-presets">
-                                                <button class="set-all-btn" id="set-all-half-beat" title="½ beat each">½ beat</button>
-                                                <button class="set-all-btn" id="set-all-1-beat"  title="1 beat each">1 beat</button>
-                                                <button class="set-all-btn" id="set-all-2-beat"  title="2 beats each">2 beats</button>
-                                                <button class="set-all-btn" id="set-all-4-beat"  title="4 beats each">4 beats</button>
+                                        <!-- Beat Timing Toolbar -->
+                                        <div class="beat-toolbar" id="set-all-toolbar">
+
+                                            <!-- Row 1: Uniform -->
+                                            <div class="beat-toolbar-row">
+                                                <span class="beat-toolbar-label">All same</span>
+                                                <div class="beat-toolbar-btns">
+                                                    <button class="set-all-btn" id="set-all-half-beat">½ beat</button>
+                                                    <button class="set-all-btn" id="set-all-1-beat">1 beat</button>
+                                                    <button class="set-all-btn" id="set-all-2-beat">2 beats</button>
+                                                    <button class="set-all-btn" id="set-all-4-beat">4 beats</button>
+                                                </div>
+                                                <div class="beat-toolbar-custom">
+                                                    <input type="number" id="set-all-custom-val" min="0.1" max="30" step="0.1" value="1.5">
+                                                    <span class="cai-unit">s</span>
+                                                    <button class="set-all-btn set-all-apply" id="set-all-apply">Apply</button>
+                                                </div>
                                             </div>
-                                            <div class="set-all-custom">
-                                                <input type="number" id="set-all-custom-val" min="0.1" max="30" step="0.1" value="1.5" placeholder="sec">
-                                                <span class="cai-unit">s</span>
-                                                <button class="set-all-btn set-all-apply" id="set-all-apply">Apply</button>
+
+                                            <!-- Row 2: From Music -->
+                                            <div class="beat-toolbar-row beat-toolbar-vary-row">
+                                                <span class="beat-toolbar-label">Music</span>
+                                                <button class="set-all-btn set-all-detect" id="beat-detect-btn">🎵 Detect from Music</button>
+                                                <div class="beat-group-wrap">
+                                                    <span class="cai-label" style="width:auto;">per slide:</span>
+                                                    <select class="beat-group-select" id="beat-group-select">
+                                                        <option value="1">1 beat</option>
+                                                        <option value="2" selected>2 beats</option>
+                                                        <option value="4">4 beats</option>
+                                                        <option value="0.5">½ beat</option>
+                                                    </select>
+                                                </div>
+                                                <span class="beat-detect-status" id="beat-detect-status"></span>
+                                                <button class="set-all-btn set-all-reset" id="set-all-reset">Reset</button>
                                             </div>
-                                            <button class="set-all-btn set-all-reset" id="set-all-reset" title="Reset all to global duration">Reset</button>
+
+                                            <!-- Row 3: Timing Guide -->
+                                            <div class="beat-toolbar-row beat-toolbar-help-row">
+                                                <button class="help-toggle-btn" id="beat-help-toggle" type="button">
+                                                    <i data-lucide="help-circle" style="width: 12px; height: 12px;"></i>
+                                                    Timing Guide
+                                                </button>
+                                                <div class="beat-help-content hidden" id="beat-help-content">
+                                                    <div class="help-grid">
+                                                        <div class="help-col">
+                                                            <div class="help-title">
+                                                                <i data-lucide="zap" style="width: 10px; height: 10px; color: var(--accent);"></i>
+                                                                ⚡ All Same
+                                                            </div>
+                                                            <div class="help-text">Applies a uniform interval to all photos (e.g. 1.5s or synced to standard beats). <strong>Use for clean, consistent pacing.</strong></div>
+                                                        </div>
+                                                        <div class="help-col">
+                                                            <div class="help-title">
+                                                                <i data-lucide="music" style="width: 10px; height: 10px; color: #4ade80;"></i>
+                                                                🎵 Music Beat Sync
+                                                            </div>
+                                                            <div class="help-text">Analyzes real drum/kick transients of the song. Each photo transitions precisely on its beat. <strong>Use for dynamic, rhythm-matched edits.</strong></div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
+
 
                                         <div id="captions-container" class="captions-list"></div>
                                     </div>

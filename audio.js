@@ -83,6 +83,81 @@ export class AudioEngine {
         this.beatDuration = 60 / this.bpm;
     }
 
+    /**
+     * Detect beat timestamps from the loaded custom audio buffer.
+     * Uses energy-based onset detection (RMS per frame vs local mean).
+     *
+     * @param {number} startOffset  - Audio trim start in seconds (default: customAudioStart)
+     * @param {number} endOffset    - Audio trim end in seconds   (default: customAudioEnd)
+     * @param {object} opts         - Optional tuning: { hopSize, threshold, minGapSec }
+     * @returns {number[]}          - Array of beat timestamps in seconds (relative to startOffset)
+     */
+    detectBeats(startOffset, endOffset, opts = {}) {
+        const buffer = this.customAudioBuffer;
+        if (!buffer) return [];
+
+        const start  = startOffset ?? this.customAudioStart ?? 0;
+        const end    = endOffset   ?? this.customAudioEnd   ?? buffer.duration;
+
+        // Try using high-quality offline-detected onsets if cached
+        if (this.allDetectedOnsets && this.allDetectedOnsets.length > 0) {
+            const beats = this.allDetectedOnsets
+                .filter(t => t >= start && t <= end)
+                .map(t => Math.round((t - start) * 1000) / 1000);
+            this.detectedBeatTimes = beats;
+            console.log(`[AudioEngine] detectBeats (cached): found ${beats.length} beats in trim [${start.toFixed(2)}s – ${end.toFixed(2)}s]`);
+            return beats;
+        }
+
+        // Fallback to synchronous RMS energy detection on raw channel data
+        const sr     = buffer.sampleRate;
+        const raw = buffer.getChannelData(0);
+        const startSample = Math.max(0, Math.floor(start * sr));
+        const endSample   = Math.min(raw.length, Math.ceil(end * sr));
+
+        // Analysis parameters
+        const frameSize  = opts.frameSize  || 512;                // ~11.6ms @ 44100
+        const hopSize    = opts.hopSize    || 256;                // 50% overlap
+        const winCount   = opts.winCount   || 43;                 // local mean window (±43 frames ≈ ±500ms)
+        const threshold  = opts.threshold  || 1.5;                // energy must be 1.5× local mean
+        const minGapSec  = opts.minGapSec  || 0.25;              // minimum seconds between beats
+
+        const frames = [];
+        for (let s = startSample; s + frameSize < endSample; s += hopSize) {
+            let energy = 0;
+            for (let j = 0; j < frameSize; j++) {
+                energy += raw[s + j] * raw[s + j];
+            }
+            const rms = Math.sqrt(energy / frameSize);
+            const timeSec = ((s + frameSize / 2) / sr) - start;
+            frames.push({ t: timeSec, e: rms });
+        }
+
+        if (frames.length === 0) return [];
+
+        const beats = [];
+        let lastBeatTime = -Infinity;
+
+        for (let i = winCount; i < frames.length - winCount; i++) {
+            let localSum = 0;
+            for (let k = i - winCount; k <= i + winCount; k++) localSum += frames[k].e;
+            const localMean = localSum / (winCount * 2 + 1);
+
+            const isAboveThresh   = frames[i].e > threshold * localMean;
+            const isLocalMax      = frames[i].e >= frames[i - 1].e && frames[i].e >= frames[i + 1].e;
+            const isGapSatisfied  = frames[i].t - lastBeatTime >= minGapSec;
+
+            if (isAboveThresh && isLocalMax && isGapSatisfied) {
+                beats.push(frames[i].t);
+                lastBeatTime = frames[i].t;
+            }
+        }
+
+        this.detectedBeatTimes = beats;
+        console.log(`[AudioEngine] detectBeats (RMS fallback): found ${beats.length} beats in [${start.toFixed(2)}s – ${end.toFixed(2)}s]`);
+        return beats;
+    }
+
     start(onBeat, offset = 0) {
         this.init();
         if (this.isPlaying) this.stop();
@@ -168,15 +243,20 @@ export class AudioEngine {
                     this.customAudioEnd = decodedBuffer.duration;
                     
                     // Run beat detection asynchronously (doesn't block playback)
-                    this.detectBeats(decodedBuffer).then(({ bpm, beatTimes }) => {
+                    this.detectBpmAndGrid(decodedBuffer).then(({ bpm, beatTimes, onsets }) => {
                         this.detectedBPM = bpm;
-                        this.detectedBeatTimes = beatTimes;
+                        this.allDetectedOnsets = onsets;
                         this.bpm = bpm;
                         this.beatDuration = 60 / bpm;
-                        console.log(`[AudioEngine] Beat detection: ${bpm.toFixed(1)} BPM, ${beatTimes.length} beats`);
+                        
+                        // Populate detectedBeatTimes relative to the default/initial trim
+                        const initialBeats = this.detectBeats();
+                        
+                        console.log(`[AudioEngine] Beat detection: ${bpm.toFixed(1)} BPM, ${onsets.length} raw onsets`);
                         // Notify app that beat detection is done so it can re-sync if needed
-                        window.dispatchEvent(new CustomEvent('audio-beat-detected', { detail: { bpm, beatTimes } }));
-                    }).catch(() => {
+                        window.dispatchEvent(new CustomEvent('audio-beat-detected', { detail: { bpm, beatTimes: initialBeats } }));
+                    }).catch((err) => {
+                        console.error("[AudioEngine] Beat detection failed:", err);
                         // Fallback to 120 BPM
                         this.bpm = 120;
                         this.beatDuration = 60 / 120;
@@ -208,7 +288,7 @@ export class AudioEngine {
      * Returns { bpm, beatTimes } where beatTimes is an array of beat positions in seconds.
      * This is an industry-standard approach: high-pass filter → rectify → window energy → find peaks.
      */
-    async detectBeats(audioBuffer) {
+    async detectBpmAndGrid(audioBuffer) {
         const sampleRate = audioBuffer.sampleRate;
         const numChannels = audioBuffer.numberOfChannels;
         const length = audioBuffer.length;
@@ -312,7 +392,7 @@ export class AudioEngine {
             beatTimes.push(Math.round(t * 1000) / 1000);
         }
         
-        return { bpm: estimatedBPM, beatTimes };
+        return { bpm: estimatedBPM, beatTimes, onsets };
     }
 
     playCustomBuffer(offset = 0) {

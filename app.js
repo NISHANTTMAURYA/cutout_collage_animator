@@ -1539,16 +1539,21 @@ function generateCaptionsEditor() {
 // Event Listeners Setup
 function setupEventListeners() {
 
-    // ── "Set All" duration toolbar ────────────────────────────────────────────
-    function applyAllDurations(dur) {
-        const clamped = Math.max(0.1, Math.min(30, parseFloat(dur) || state.slideDuration));
-        state.slides.forEach(s => { s.duration = parseFloat(clamped.toFixed(2)); });
+    // ── Beat Timing toolbar ───────────────────────────────────────────────────
+    function refreshAfterDurChange(msg) {
         if (renderer) renderer.setSlides(state.slides);
-        generateCaptionsEditor();     // rebuild cards with new values
+        generateCaptionsEditor();
         updateTimelineDisplay();
         autoTrimCustomAudio();
         triggerAutosave();
-        showToast(`⚡ All slides set to ${clamped.toFixed(2)}s`);
+        if (msg) showToast(msg);
+    }
+
+    // Uniform: apply same duration to every slide
+    function applyAllDurations(dur, toastMsg) {
+        const clamped = Math.max(0.1, Math.min(30, parseFloat(dur) || state.slideDuration));
+        state.slides.forEach(s => { s.duration = parseFloat(clamped.toFixed(2)); });
+        refreshAfterDurChange(toastMsg || `⚡ All slides → ${clamped.toFixed(2)}s`);
     }
 
     const setBeatBtn = (id, beats) => {
@@ -1565,21 +1570,119 @@ function setupEventListeners() {
 
     const applyBtn = document.getElementById('set-all-apply');
     if (applyBtn) applyBtn.addEventListener('click', () => {
-        const val = document.getElementById('set-all-custom-val')?.value;
-        applyAllDurations(val);
+        applyAllDurations(document.getElementById('set-all-custom-val')?.value);
     });
 
+    // Random Mix: each slide gets a random beat multiple, no two same in a row
+    // ── Beat Detection from Music ────────────────────────────────────────────
+    const detectBtn    = document.getElementById('beat-detect-btn');
+    const detectStatus = document.getElementById('beat-detect-status');
+    const groupSelect  = document.getElementById('beat-group-select');
+
+    function applyDetectedBeats(beats, beatsPerSlide) {
+        if (beats.length === 0) {
+            showToast('⚠️ No beats detected. Try loading audio first.');
+            return;
+        }
+
+        const audioEnd = (audio.customAudioEnd || (audio.customAudioBuffer?.duration ?? 0))
+                       - (audio.customAudioStart || 0);
+
+        // Generate target transition timestamps starting from 0 (the beginning)
+        let boundaries = [0];
+        
+        if (beatsPerSlide === 0.5) {
+            // Half-beat grouping: interpolate midpoints between beats to get double-time transitions
+            for (let i = 0; i < beats.length; i++) {
+                const current = beats[i];
+                const prev = i > 0 ? beats[i - 1] : 0;
+                boundaries.push((prev + current) / 2);
+                boundaries.push(current);
+            }
+        } else {
+            // Integer beat groupings (1, 2, 4, etc.)
+            const N = Math.round(beatsPerSlide);
+            for (let i = N - 1; i < beats.length; i += N) {
+                boundaries.push(beats[i]);
+            }
+        }
+        
+        // Append the end of audio to close the last slide
+        boundaries.push(audioEnd);
+
+        // Deduplicate and sort boundaries to ensure chronological order
+        boundaries = [...new Set(boundaries)].sort((a, b) => a - b);
+
+        state.slides.forEach((s, i) => {
+            const t0 = boundaries[Math.min(i, boundaries.length - 1)];
+            const t1 = boundaries[Math.min(i + 1, boundaries.length - 1)];
+            const dur = Math.max(0.1, t1 - t0);
+            s.duration = parseFloat(dur.toFixed(3));
+        });
+
+        if (detectStatus) detectStatus.textContent = `✓ ${beats.length} beats`;
+        refreshAfterDurChange(`🎵 Synced ${state.slides.length} slides to ${beats.length} detected beats`);
+    }
+
+    if (detectBtn) {
+        detectBtn.addEventListener('click', () => {
+            if (!audio.customAudioBuffer) {
+                showToast('⚠️ Load a music track first (Step 3 → Music section)');
+                return;
+            }
+            detectBtn.disabled = true;
+            detectBtn.textContent = '⏳ Analyzing...';
+            if (detectStatus) detectStatus.textContent = '';
+
+            // Run beat detection async to not block the UI
+            setTimeout(() => {
+                try {
+                    const beats = audio.detectBeats();     // uses current trim window
+                    const N = parseFloat(groupSelect?.value || 1);
+                    applyDetectedBeats(beats, N);
+                } catch (err) {
+                    console.error('[beatDetect]', err);
+                    showToast('⚠️ Beat detection failed: ' + err.message);
+                } finally {
+                    detectBtn.disabled = false;
+                    detectBtn.textContent = '🎵 Detect from Music';
+                }
+            }, 20); // yield to browser paint first
+        });
+    }
+
+    // Re-apply when user changes the "per slide" grouping without re-detecting
+    if (groupSelect) {
+        groupSelect.addEventListener('change', () => {
+            if (audio.detectedBeatTimes?.length > 0) {
+                applyDetectedBeats(audio.detectedBeatTimes, parseFloat(groupSelect.value));
+            }
+        });
+    }
+
+    // Reset all back to global slideDuration
     const resetBtn = document.getElementById('set-all-reset');
     if (resetBtn) resetBtn.addEventListener('click', () => {
         state.slides.forEach(s => { delete s.duration; });
-        if (renderer) renderer.setSlides(state.slides);
-        generateCaptionsEditor();
-        updateTimelineDisplay();
-        autoTrimCustomAudio();
-        triggerAutosave();
-        showToast('↩️ Slide durations reset to global');
+        if (detectStatus) detectStatus.textContent = '';
+        refreshAfterDurChange('↩️ Slide durations reset to global');
     });
+
+    // Toggle Timing Guide description panel
+    const helpToggle = document.getElementById('beat-help-toggle');
+    const helpContent = document.getElementById('beat-help-content');
+    if (helpToggle && helpContent) {
+        helpToggle.addEventListener('click', () => {
+            const isHidden = helpContent.classList.toggle('hidden');
+            // Re-render Lucide icons inside the panel if shown
+            if (!isHidden && window.lucide) {
+                window.lucide.createIcons();
+            }
+        });
+    }
     // ─────────────────────────────────────────────────────────────────────────
+
+
 
 
     // Project Select dropdown change
