@@ -76,7 +76,28 @@ const state = {
     customAudioFileBlob: null,  // Uint8Array — the raw audio bytes stored in IndexedDB
     customAudioFilename: '',
     speedMode: 'manual',
-    videoRatio: '9-16'
+    videoRatio: '9-16',
+    
+    // Thumbnail Designer State
+    thumbnailMode: 'auto',        // 'auto' or 'manual'
+    thumbnailCaption: '',         // Text overlay
+    thumbnailFont: 'Dela Gothic One', 
+    thumbnailFontSize: 60,
+    thumbnailTextColor: '#ffffff',
+    thumbnailStrokeColor: '#000000',
+    thumbnailStrokeWidth: 6,
+    thumbnailTextX: 50,           // Percent (0-100)
+    thumbnailTextY: 80,           // Percent (0-100)
+    thumbnailBgType: 'gradient',  // 'solid', 'gradient', 'blur', 'transparent'
+    thumbnailBgColor: '#1e1e2e',
+    thumbnailBgGradStart: '#ff4b8b',
+    thumbnailBgGradEnd: '#2b1055',
+    thumbnailBgBlurIdx: 0,        // Slide index for blurred photo bg
+    thumbnailCutouts: [],         // Array of { slideId, x, y, scale, rotation, zIndex, visible }
+    thumbnailDataUrl: null,        // Rendered PNG cover Data URL
+    thumbnailTextFillType: 'solid', // 'solid' or 'gradient'
+    thumbnailGradEnd: '#FFD700',    // Gradient end color for text
+    thumbnailShadowStyle: 'retro3d' // 'none','deep','glow','retro3d','soft'
 };
 
 // Instantiate Modules
@@ -226,7 +247,54 @@ const DOM = {
     timingInfoDesc: document.getElementById('timing-info-desc'),
     infoBtnDuration: document.getElementById('info-btn-duration'),
     infoBtnHold: document.getElementById('info-btn-hold'),
-    videoAspectRatio: document.getElementById('video-aspect-ratio')
+    videoAspectRatio: document.getElementById('video-aspect-ratio'),
+    
+    // Video Cover / Thumbnail settings
+    thumbnailPreviewBox: document.getElementById('thumbnail-preview-box'),
+    thumbnailPreviewImg: document.getElementById('thumbnail-preview-img'),
+    thumbnailPreviewPlaceholder: document.getElementById('thumbnail-preview-placeholder'),
+    btnOpenThumbnailDesigner: document.getElementById('btn-open-thumbnail-designer'),
+    thumbnailModal: document.getElementById('thumbnail-modal'),
+    thumbnailModalClose: document.getElementById('thumbnail-modal-close'),
+    thumbnailModalOverlay: document.getElementById('thumbnail-modal-overlay'),
+    thumbnailCanvas: document.getElementById('thumbnail-canvas'),
+    thumbnailCanvasContainer: document.getElementById('thumbnail-canvas-container'),
+    btnThumbModeAuto: document.getElementById('btn-thumb-mode-auto'),
+    btnThumbModeManual: document.getElementById('btn-thumb-mode-manual'),
+    btnThumbAutoGenerate: document.getElementById('btn-thumb-auto-generate'),
+    thumbAutoGenerateArea: document.getElementById('thumb-auto-generate-area'),
+    thumbCutoutList: document.getElementById('thumb-cutout-list'),
+    cutoutLimitIndicator: document.getElementById('cutout-limit-indicator'),
+    thumbManualControlsCard: document.getElementById('thumb-manual-controls-card'),
+    thumbActiveScale: document.getElementById('thumb-active-scale'),
+    thumbActiveScaleVal: document.getElementById('thumb-active-scale-val'),
+    thumbActiveRotation: document.getElementById('thumb-active-rotation'),
+    thumbActiveRotationVal: document.getElementById('thumb-active-rotation-val'),
+    btnThumbLayerDown: document.getElementById('btn-thumb-layer-down'),
+    btnThumbLayerUp: document.getElementById('btn-thumb-layer-up'),
+    thumbBgTypeSelect: document.getElementById('thumb-bg-type-select'),
+    thumbBgColorPickers: document.getElementById('thumb-bg-color-pickers'),
+    thumbBgColor1: document.getElementById('thumb-bg-color-1'),
+    thumbBgColor2: document.getElementById('thumb-bg-color-2'),
+    thumbBgColor1Group: document.getElementById('thumb-bg-color-1-group'),
+    thumbBgColor2Group: document.getElementById('thumb-bg-color-2-group'),
+    thumbBgBlurSelectGroup: document.getElementById('thumb-bg-blur-select-group'),
+    thumbBgBlurSelect: document.getElementById('thumb-bg-blur-select'),
+    thumbCaptionInput: document.getElementById('thumb-caption-input'),
+    thumbFontSelect: document.getElementById('thumb-font-select'),
+    thumbCaptionColor: document.getElementById('thumb-caption-color'),
+    thumbCaptionStroke: document.getElementById('thumb-caption-stroke'),
+    thumbFontSize: document.getElementById('thumb-font-size'),
+    thumbFontSizeVal: document.getElementById('thumb-font-size-val'),
+    thumbStrokeWidth: document.getElementById('thumb-stroke-width'),
+    thumbStrokeWidthVal: document.getElementById('thumb-stroke-width-val'),
+    btnThumbDownload: document.getElementById('btn-thumb-download'),
+    btnThumbSave: document.getElementById('btn-thumb-save'),
+    thumbCaptionGradEnd: document.getElementById('thumb-caption-grad-end'),
+    thumbFillSolid: document.getElementById('thumb-fill-solid'),
+    thumbFillGradient: document.getElementById('thumb-fill-gradient'),
+    thumbShadowSelect: document.getElementById('thumb-shadow-select'),
+    thumbColorPresets: document.getElementById('thumb-color-presets')
 };
 
 // Canvas context for manual cutout editor
@@ -270,6 +338,24 @@ window.addEventListener('DOMContentLoaded', () => {
     
     // Start Canvas animation tick
     requestAnimationFrame(animationTick);
+    
+    // Init Lucide icons — poll until lucide library is ready (CDN load timing)
+    function initLucide() {
+        if (window.lucide) {
+            lucide.createIcons();
+        } else {
+            let tries = 0;
+            const poll = setInterval(() => {
+                if (window.lucide) {
+                    clearInterval(poll);
+                    lucide.createIcons();
+                } else if (++tries > 30) {
+                    clearInterval(poll);
+                }
+            }, 100);
+        }
+    }
+    initLucide();
     
     // When beat detection finishes (after audio load), re-sync speed if in auto mode
     window.addEventListener('audio-beat-detected', (e) => {
@@ -564,7 +650,26 @@ async function saveProjectSettingsOnly() {
                 musicVolume: state.musicVolume,
                 speedMode: state.speedMode,
                 videoRatio: state.videoRatio,
-                captionFont: state.captionFont
+                captionFont: state.captionFont,
+                thumbnailMode: state.thumbnailMode,
+                thumbnailCaption: state.thumbnailCaption,
+                thumbnailFont: state.thumbnailFont,
+                thumbnailFontSize: state.thumbnailFontSize,
+                thumbnailTextColor: state.thumbnailTextColor,
+                thumbnailStrokeColor: state.thumbnailStrokeColor,
+                thumbnailStrokeWidth: state.thumbnailStrokeWidth,
+                thumbnailTextX: state.thumbnailTextX,
+                thumbnailTextY: state.thumbnailTextY,
+                thumbnailBgType: state.thumbnailBgType,
+                thumbnailBgColor: state.thumbnailBgColor,
+                thumbnailBgGradStart: state.thumbnailBgGradStart,
+                thumbnailBgGradEnd: state.thumbnailBgGradEnd,
+                thumbnailBgBlurIdx: state.thumbnailBgBlurIdx,
+                thumbnailCutouts: state.thumbnailCutouts,
+                thumbnailDataUrl: state.thumbnailDataUrl,
+                thumbnailTextFillType: state.thumbnailTextFillType,
+                thumbnailGradEnd: state.thumbnailGradEnd,
+                thumbnailShadowStyle: state.thumbnailShadowStyle
             }
         };
         await saveProject(projectRecord);
@@ -600,7 +705,26 @@ async function saveCurrentProjectToDb() {
                 musicVolume: state.musicVolume,
                 speedMode: state.speedMode,
                 videoRatio: state.videoRatio,
-                captionFont: state.captionFont
+                captionFont: state.captionFont,
+                thumbnailMode: state.thumbnailMode,
+                thumbnailCaption: state.thumbnailCaption,
+                thumbnailFont: state.thumbnailFont,
+                thumbnailFontSize: state.thumbnailFontSize,
+                thumbnailTextColor: state.thumbnailTextColor,
+                thumbnailStrokeColor: state.thumbnailStrokeColor,
+                thumbnailStrokeWidth: state.thumbnailStrokeWidth,
+                thumbnailTextX: state.thumbnailTextX,
+                thumbnailTextY: state.thumbnailTextY,
+                thumbnailBgType: state.thumbnailBgType,
+                thumbnailBgColor: state.thumbnailBgColor,
+                thumbnailBgGradStart: state.thumbnailBgGradStart,
+                thumbnailBgGradEnd: state.thumbnailBgGradEnd,
+                thumbnailBgBlurIdx: state.thumbnailBgBlurIdx,
+                thumbnailCutouts: state.thumbnailCutouts,
+                thumbnailDataUrl: state.thumbnailDataUrl,
+                thumbnailTextFillType: state.thumbnailTextFillType,
+                thumbnailGradEnd: state.thumbnailGradEnd,
+                thumbnailShadowStyle: state.thumbnailShadowStyle
             }
         };
         await saveProject(projectRecord);
@@ -663,6 +787,27 @@ async function loadProject(projectId) {
         state.videoRatio = project.settings.videoRatio || '9-16';
         state.captionFont = project.settings.captionFont || 'playfair';
 
+        // Restore Cover Art / Thumbnail designer settings
+        state.thumbnailMode = project.settings.thumbnailMode || 'auto';
+        state.thumbnailCaption = project.settings.thumbnailCaption || '';
+        state.thumbnailFont = project.settings.thumbnailFont || 'Dela Gothic One';
+        state.thumbnailFontSize = project.settings.thumbnailFontSize || 60;
+        state.thumbnailTextColor = project.settings.thumbnailTextColor || '#ffffff';
+        state.thumbnailStrokeColor = project.settings.thumbnailStrokeColor || '#000000';
+        state.thumbnailStrokeWidth = project.settings.thumbnailStrokeWidth !== undefined ? project.settings.thumbnailStrokeWidth : 6;
+        state.thumbnailTextX = project.settings.thumbnailTextX !== undefined ? project.settings.thumbnailTextX : 50;
+        state.thumbnailTextY = project.settings.thumbnailTextY !== undefined ? project.settings.thumbnailTextY : 80;
+        state.thumbnailBgType = project.settings.thumbnailBgType || 'gradient';
+        state.thumbnailBgColor = project.settings.thumbnailBgColor || '#1e1e2e';
+        state.thumbnailBgGradStart = project.settings.thumbnailBgGradStart || '#ff4b8b';
+        state.thumbnailBgGradEnd = project.settings.thumbnailBgGradEnd || '#2b1055';
+        state.thumbnailBgBlurIdx = project.settings.thumbnailBgBlurIdx !== undefined ? project.settings.thumbnailBgBlurIdx : 0;
+        state.thumbnailCutouts = project.settings.thumbnailCutouts || [];
+        state.thumbnailDataUrl = project.settings.thumbnailDataUrl || null;
+        state.thumbnailTextFillType = project.settings.thumbnailTextFillType || 'solid';
+        state.thumbnailGradEnd = project.settings.thumbnailGradEnd || '#FFD700';
+        state.thumbnailShadowStyle = project.settings.thumbnailShadowStyle || 'retro3d';
+
         // Apply volume to AudioEngine immediately on project load (tracks volume state internally)
         audio.setVolume(state.musicVolume);
 
@@ -710,6 +855,7 @@ async function loadProject(projectId) {
 
         updateSpeedModeUI();
         updateVideoAspectRatio();
+        updateThumbnailPreviewUI();
 
         if (renderer) {
             renderer.slideDuration = state.slideDuration;
@@ -2132,6 +2278,9 @@ function setupEventListeners() {
     if (DOM.btnPrevCropApply) {
         DOM.btnPrevCropApply.addEventListener('click', applyCrop);
     }
+    
+    // Setup Cover Art / Thumbnail designer event listeners
+    setupThumbnailEventListeners();
 }
 
 // Image Preview Modal Functions
@@ -2887,7 +3036,8 @@ function togglePlayback() {
     state.isPlaying = !state.isPlaying;
     
     if (state.isPlaying) {
-        DOM.hudPlayBtn.textContent = '⏸️';
+        DOM.hudPlayBtn.innerHTML = '<i data-lucide="pause" style="width:16px;height:16px;"></i>';
+        if (window.lucide) lucide.createIcons();
         DOM.musicIndicator.style.display = 'flex';
         // Play audio
         console.log(`[Playback] Starting playback. Theme: ${state.musicTheme}, Volume: ${state.musicVolume}`);
@@ -2897,7 +3047,8 @@ function togglePlayback() {
         audio.setTheme(state.musicTheme);
         audio.start(onAudioBeat);
     } else {
-        DOM.hudPlayBtn.textContent = '▶️';
+        DOM.hudPlayBtn.innerHTML = '<i data-lucide="play" style="width:16px;height:16px;"></i>';
+        if (window.lucide) lucide.createIcons();
         DOM.musicIndicator.style.display = 'none';
         // Stop audio
         audio.stop();
@@ -3160,14 +3311,39 @@ async function startExportingVideo() {
         }
     }
 
-    const processAndDownload = (recordedChunks, recorderMimeType) => {
+    const processAndDownload = async (recordedChunks, recorderMimeType) => {
         const videoBlob = new Blob(recordedChunks, { type: recorderMimeType || 'video/webm' });
         const fallbackURL = URL.createObjectURL(videoBlob);
         
         DOM.exportStatusText.textContent = "Optimizing video...";
         showToast("🎬 Optimizing video quality & compatibility...");
         
-        fetch('/convert', {
+        let convertUrl = '/convert';
+        
+        if (state.thumbnailDataUrl) {
+            try {
+                DOM.exportStatusText.textContent = "Uploading cover art...";
+                // Convert dataUrl to blob
+                const thumbBlob = await (await fetch(state.thumbnailDataUrl)).blob();
+                const uploadResp = await fetch('/upload_thumbnail', {
+                    method: 'POST',
+                    body: thumbBlob
+                });
+                if (uploadResp.ok) {
+                    const uploadResult = await uploadResp.json();
+                    if (uploadResult.thumbnail_id) {
+                        convertUrl = `/convert?thumbnail_id=${encodeURIComponent(uploadResult.thumbnail_id)}`;
+                        console.info("[export] Thumbnail uploaded successfully, ID:", uploadResult.thumbnail_id);
+                    }
+                }
+            } catch (err) {
+                console.warn("[export] Failed to upload thumbnail cover art, proceeding without it:", err);
+            }
+        }
+        
+        DOM.exportStatusText.textContent = "Optimizing video...";
+        
+        fetch(convertUrl, {
             method: 'POST',
             body: videoBlob
         })
@@ -3675,4 +3851,1019 @@ function drawTransitionCurve() {
         ctx.fill();
         ctx.shadowBlur = 0; // reset
     }
+}
+
+// =========================================================================
+// 🎨 COVER ART & THUMBNAIL DESIGNER MODULE
+// =========================================================================
+
+let activeSelectedCutout = null;
+let activeSelectedElement = null; // 'text' or config object
+
+let thumbDragSession = {
+    activeElement: null, // 'text' or config
+    isDragging: false,
+    startX: 0,
+    startY: 0,
+    elemStartX: 0,
+    elemStartY: 0
+};
+
+// Render small cover art thumbnail preview box in Step 4 sidebar
+function updateThumbnailPreviewUI() {
+    if (state.thumbnailDataUrl) {
+        DOM.thumbnailPreviewImg.src = state.thumbnailDataUrl;
+        DOM.thumbnailPreviewImg.style.display = 'block';
+        DOM.thumbnailPreviewPlaceholder.style.display = 'none';
+    } else {
+        DOM.thumbnailPreviewImg.style.display = 'none';
+        DOM.thumbnailPreviewPlaceholder.style.display = 'block';
+        DOM.thumbnailPreviewPlaceholder.textContent = 'No Cover';
+    }
+}
+
+// Adjust canvas dimensions and styles based on selected aspect ratio
+function resizeThumbnailCanvas() {
+    const canvas = DOM.thumbnailCanvas;
+    if (!canvas) return;
+    
+    let width = 1080;
+    let height = 1080;
+    
+    if (state.videoRatio === '9-16') {
+        width = 1080;
+        height = 1920;
+    } else if (state.videoRatio === '16-9') {
+        width = 1920;
+        height = 1080;
+    } else if (state.videoRatio === '4-5') {
+        width = 1080;
+        height = 1350;
+    }
+    
+    canvas.width = width;
+    canvas.height = height;
+    
+    const parent = DOM.thumbnailCanvasContainer;
+    const parentRect = parent.parentElement.getBoundingClientRect();
+    const maxWidth = parentRect.width - 40;
+    const maxHeight = parentRect.height - 40;
+    
+    const aspect = width / height;
+    let cssWidth = maxWidth;
+    let cssHeight = maxWidth / aspect;
+    
+    if (cssHeight > maxHeight) {
+        cssHeight = maxHeight;
+        cssWidth = maxHeight * aspect;
+    }
+    
+    canvas.style.width = `${cssWidth}px`;
+    canvas.style.height = `${cssHeight}px`;
+}
+
+// Renders solid background, gradients, blurred photos, cutouts and caption overlays
+function drawThumbnail() {
+    const canvas = DOM.thumbnailCanvas;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width;
+    const h = canvas.height;
+    
+    ctx.clearRect(0, 0, w, h);
+    
+    // 1. Render Background
+    if (state.thumbnailBgType === 'solid') {
+        ctx.fillStyle = state.thumbnailBgColor;
+        ctx.fillRect(0, 0, w, h);
+    } else if (state.thumbnailBgType === 'gradient') {
+        const grad = ctx.createLinearGradient(0, 0, 0, h);
+        grad.addColorStop(0, state.thumbnailBgGradStart);
+        grad.addColorStop(1, state.thumbnailBgGradEnd);
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, w, h);
+    } else if (state.thumbnailBgType === 'blur') {
+        const slide = state.slides[state.thumbnailBgBlurIdx];
+        if (slide && slide.img) {
+            const imgAspect = slide.img.naturalWidth / slide.img.naturalHeight;
+            const canvasAspect = w / h;
+            let drawW, drawH, drawX, drawY;
+            if (imgAspect > canvasAspect) {
+                drawH = h;
+                drawW = h * imgAspect;
+                drawX = (w - drawW) / 2;
+                drawY = 0;
+            } else {
+                drawW = w;
+                drawH = w / imgAspect;
+                drawX = 0;
+                drawY = (h - drawH) / 2;
+            }
+            
+            // Draw blurred image
+            ctx.save();
+            ctx.filter = 'blur(35px)';
+            ctx.drawImage(slide.img, drawX, drawY, drawW, drawH);
+            ctx.restore();
+            
+            // Overlay tint
+            ctx.fillStyle = 'rgba(28, 23, 64, 0.4)';
+            ctx.fillRect(0, 0, w, h);
+        } else {
+            ctx.fillStyle = '#1e1e2e';
+            ctx.fillRect(0, 0, w, h);
+        }
+    }
+    
+    // 2. Render Selected Cutouts
+    const visibleCutouts = state.thumbnailCutouts
+        .filter(c => c.visible)
+        .sort((a, b) => a.zIndex - b.zIndex);
+        
+    visibleCutouts.forEach((config) => {
+        const slide = state.slides.find(s => s.id === config.slideId);
+        if (!slide || !slide.cutout) return;
+        
+        ctx.save();
+        const cx = (config.x / 100) * w;
+        const cy = (config.y / 100) * h;
+        
+        ctx.translate(cx, cy);
+        ctx.rotate(config.rotation);
+        
+        const scale = config.scale * (w / 1080);
+        const destW = slide.cutout.width * scale;
+        const destH = slide.cutout.height * scale;
+        
+        ctx.drawImage(slide.cutout, -destW / 2, -destH / 2, destW, destH);
+        
+        // Render dashed bounding frame in Manual Mode
+        if (state.thumbnailMode === 'manual' && activeSelectedCutout === config) {
+            ctx.strokeStyle = '#7c6fdb';
+            ctx.lineWidth = 4;
+            ctx.setLineDash([8, 8]);
+            ctx.strokeRect(-destW / 2 - 4, -destH / 2 - 4, destW + 8, destH + 8);
+            
+            // Square handles on corners
+            ctx.fillStyle = '#ffffff';
+            ctx.strokeStyle = '#7c6fdb';
+            ctx.lineWidth = 3;
+            ctx.setLineDash([]);
+            const hs = 12;
+            ctx.fillRect(-destW/2 - 4 - hs/2, -destH/2 - 4 - hs/2, hs, hs);
+            ctx.strokeRect(-destW/2 - 4 - hs/2, -destH/2 - 4 - hs/2, hs, hs);
+            ctx.fillRect(destW/2 + 4 - hs/2, -destH/2 - 4 - hs/2, hs, hs);
+            ctx.strokeRect(destW/2 + 4 - hs/2, -destH/2 - 4 - hs/2, hs, hs);
+            ctx.fillRect(-destW/2 - 4 - hs/2, destH/2 + 4 - hs/2, hs, hs);
+            ctx.strokeRect(-destW/2 - 4 - hs/2, destH/2 + 4 - hs/2, hs, hs);
+            ctx.fillRect(destW/2 + 4 - hs/2, destH/2 + 4 - hs/2, hs, hs);
+            ctx.strokeRect(destW/2 + 4 - hs/2, destH/2 + 4 - hs/2, hs, hs);
+        }
+        ctx.restore();
+    });
+    
+    // 3. Render Caption Overlay
+    if (state.thumbnailCaption) {
+        ctx.save();
+        const tx = (state.thumbnailTextX / 100) * w;
+        const ty = (state.thumbnailTextY / 100) * h;
+        
+        ctx.translate(tx, ty);
+        ctx.font = `bold ${state.thumbnailFontSize}px "${state.thumbnailFont}"`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        
+        const lines = state.thumbnailCaption.split('\n');
+        const lineHeight = state.thumbnailFontSize * 1.15;
+        
+        if (state.thumbnailMode === 'manual' && activeSelectedElement === 'text') {
+            let maxLineWidth = 0;
+            lines.forEach(line => {
+                const width = ctx.measureText(line).width;
+                if (width > maxLineWidth) maxLineWidth = width;
+            });
+            const textH = lines.length * lineHeight;
+            ctx.strokeStyle = '#7c6fdb';
+            ctx.lineWidth = 4;
+            ctx.setLineDash([8, 8]);
+            ctx.strokeRect(-maxLineWidth/2 - 15, -textH/2 - 10, maxLineWidth + 30, textH + 20);
+            ctx.setLineDash([]);
+        }
+        
+        lines.forEach((line, idx) => {
+            const ly = (idx - (lines.length - 1) / 2) * lineHeight;
+            
+            // Apply shadow style BEFORE drawing
+            const shadow = state.thumbnailShadowStyle || 'none';
+            ctx.shadowBlur = 0;
+            ctx.shadowOffsetX = 0;
+            ctx.shadowOffsetY = 0;
+            ctx.shadowColor = 'transparent';
+            
+            if (shadow === 'deep') {
+                ctx.shadowColor = 'rgba(0,0,0,0.85)';
+                ctx.shadowBlur = 16;
+                ctx.shadowOffsetX = 4;
+                ctx.shadowOffsetY = 6;
+            } else if (shadow === 'glow') {
+                ctx.shadowColor = state.thumbnailTextColor;
+                ctx.shadowBlur = 24;
+                ctx.shadowOffsetX = 0;
+                ctx.shadowOffsetY = 0;
+            } else if (shadow === 'soft') {
+                ctx.shadowColor = 'rgba(0,0,0,0.5)';
+                ctx.shadowBlur = 10;
+                ctx.shadowOffsetX = 2;
+                ctx.shadowOffsetY = 3;
+            }
+            
+            // Retro 3D: draw offset copies first, then main text
+            if (shadow === 'retro3d') {
+                ctx.shadowBlur = 0;
+                // Draw dark offset layers for 3D effect
+                for (let d = 6; d >= 1; d--) {
+                    ctx.fillStyle = `rgba(0,0,0,${0.08 * d})`;
+                    if (state.thumbnailStrokeWidth > 0) {
+                        ctx.lineJoin = 'round';
+                        ctx.strokeStyle = `rgba(0,0,0,${0.06 * d})`;
+                        ctx.lineWidth = state.thumbnailStrokeWidth;
+                        ctx.strokeText(line, d * 1.5, ly + d * 1.5);
+                    }
+                    ctx.fillText(line, d * 1.5, ly + d * 1.5);
+                }
+            }
+            
+            // Build fill (solid or gradient)
+            let textFill;
+            if (state.thumbnailTextFillType === 'gradient') {
+                // Measure bounding box for gradient height
+                const metrics = ctx.measureText(line);
+                const halfH = state.thumbnailFontSize * 0.6;
+                const grad = ctx.createLinearGradient(0, ly - halfH, 0, ly + halfH);
+                grad.addColorStop(0, state.thumbnailTextColor);
+                grad.addColorStop(1, state.thumbnailGradEnd || '#FFD700');
+                textFill = grad;
+            } else {
+                textFill = state.thumbnailTextColor;
+            }
+            
+            // Stroke outline
+            if (state.thumbnailStrokeWidth > 0) {
+                ctx.lineJoin = 'round';
+                ctx.strokeStyle = state.thumbnailStrokeColor;
+                ctx.lineWidth = state.thumbnailStrokeWidth;
+                ctx.strokeText(line, 0, ly);
+            }
+            ctx.fillStyle = state.thumbnailTextColor;
+            ctx.fillText(line, 0, ly);
+        });
+        
+        ctx.restore();
+    }
+}
+
+// Generate selectable cutouts list in the designer modal
+function renderCutoutSelectionList() {
+    if (!DOM.thumbCutoutList) return;
+    DOM.thumbCutoutList.innerHTML = '';
+    
+    const availableSlides = state.slides.filter(s => s.mask);
+    
+    // Make sure we have a config object in state.thumbnailCutouts for each slide
+    availableSlides.forEach((slide) => {
+        let config = state.thumbnailCutouts.find(c => c.slideId === slide.id);
+        if (!config) {
+            config = {
+                slideId: slide.id,
+                x: 50,
+                y: 50,
+                scale: 0.8,
+                rotation: 0,
+                zIndex: state.thumbnailCutouts.length,
+                visible: state.thumbnailCutouts.length < 3 // default first 3 visible
+            };
+            state.thumbnailCutouts.push(config);
+        }
+    });
+    
+    availableSlides.forEach((slide) => {
+        const config = state.thumbnailCutouts.find(c => c.slideId === slide.id);
+        if (!config) return;
+        
+        const isSelected = config.visible;
+        const isActive = activeSelectedCutout === config;
+        
+        const card = document.createElement('div');
+        card.className = `cutout-select-card${isSelected ? ' selected' : ''}${isActive ? ' active-selected' : ''}`;
+        card.dataset.slideId = slide.id;
+        
+        const img = document.createElement('img');
+        if (slide.cutout) {
+            img.src = slide.cutout.toDataURL('image/png', 0.4);
+        } else {
+            img.src = slide.img.src;
+        }
+        
+        const badge = document.createElement('div');
+        badge.className = 'cutout-badge-checkbox';
+        badge.textContent = isSelected ? '✓' : '';
+        
+        card.appendChild(img);
+        card.appendChild(badge);
+        
+        card.addEventListener('click', (e) => {
+            e.stopPropagation();
+            config.visible = !config.visible;
+            if (config.visible) {
+                activeSelectedCutout = config;
+                activeSelectedElement = config;
+                state.thumbnailMode = 'manual';
+                syncModeUI();
+            } else {
+                if (activeSelectedCutout === config) {
+                    activeSelectedCutout = null;
+                    activeSelectedElement = null;
+                }
+            }
+            renderCutoutSelectionList();
+            syncActiveCutoutSliders();
+            drawThumbnail();
+            triggerAutosave();
+        });
+        
+        DOM.thumbCutoutList.appendChild(card);
+    });
+    
+    const activeCount = state.thumbnailCutouts.filter(c => c.visible).length;
+    if (DOM.cutoutLimitIndicator) {
+        DOM.cutoutLimitIndicator.textContent = `Included: ${activeCount}`;
+    }
+}
+
+// Sync mode selection segmented controls
+function syncModeUI() {
+    if (state.thumbnailMode === 'auto') {
+        DOM.btnThumbModeAuto.classList.add('active');
+        DOM.btnThumbModeManual.classList.remove('active');
+        DOM.thumbAutoGenerateArea.style.display = 'block';
+        DOM.thumbManualControlsCard.style.opacity = '0.6';
+        DOM.thumbManualControlsCard.style.pointerEvents = 'none';
+    } else {
+        DOM.btnThumbModeManual.classList.add('active');
+        DOM.btnThumbModeAuto.classList.remove('active');
+        DOM.thumbAutoGenerateArea.style.display = 'none';
+        DOM.thumbManualControlsCard.style.opacity = activeSelectedCutout ? '1' : '0.6';
+        DOM.thumbManualControlsCard.style.pointerEvents = activeSelectedCutout ? 'auto' : 'none';
+    }
+}
+
+// Enable/Disable bg customizer sub-elements depending on solid/gradient/blur selection
+function syncBackgroundUI() {
+    if (!DOM.thumbBgTypeSelect) return;
+    DOM.thumbBgTypeSelect.value = state.thumbnailBgType;
+    
+    if (state.thumbnailBgType === 'solid') {
+        DOM.thumbBgColorPickers.style.display = 'flex';
+        DOM.thumbBgColor1Group.style.display = 'block';
+        DOM.thumbBgColor2Group.style.display = 'none';
+        DOM.thumbBgBlurSelectGroup.style.display = 'none';
+        
+        DOM.thumbBgColor1.value = state.thumbnailBgColor;
+    } else if (state.thumbnailBgType === 'gradient') {
+        DOM.thumbBgColorPickers.style.display = 'flex';
+        DOM.thumbBgColor1Group.style.display = 'block';
+        DOM.thumbBgColor2Group.style.display = 'block';
+        DOM.thumbBgBlurSelectGroup.style.display = 'none';
+        
+        DOM.thumbBgColor1.value = state.thumbnailBgGradStart;
+        DOM.thumbBgColor2.value = state.thumbnailBgGradEnd;
+    } else if (state.thumbnailBgType === 'blur') {
+        DOM.thumbBgColorPickers.style.display = 'none';
+        DOM.thumbBgBlurSelectGroup.style.display = 'block';
+        DOM.thumbBgBlurSelect.value = state.thumbnailBgBlurIdx;
+    } else { // transparent
+        DOM.thumbBgColorPickers.style.display = 'none';
+        DOM.thumbBgBlurSelectGroup.style.display = 'none';
+    }
+}
+
+// Sync caption styles panel form inputs
+function syncCaptionFormUI() {
+    if (DOM.thumbCaptionInput) DOM.thumbCaptionInput.value = state.thumbnailCaption;
+    if (DOM.thumbFontSelect) DOM.thumbFontSelect.value = state.thumbnailFont;
+    if (DOM.thumbCaptionColor) DOM.thumbCaptionColor.value = state.thumbnailTextColor;
+    if (DOM.thumbCaptionGradEnd) DOM.thumbCaptionGradEnd.value = state.thumbnailGradEnd || '#FFD700';
+    if (DOM.thumbCaptionStroke) DOM.thumbCaptionStroke.value = state.thumbnailStrokeColor;
+    if (DOM.thumbFontSize) {
+        DOM.thumbFontSize.value = state.thumbnailFontSize;
+        DOM.thumbFontSizeVal.textContent = state.thumbnailFontSize + 'px';
+    }
+    if (DOM.thumbStrokeWidth) {
+        DOM.thumbStrokeWidth.value = state.thumbnailStrokeWidth;
+        DOM.thumbStrokeWidthVal.textContent = state.thumbnailStrokeWidth + 'px';
+    }
+    // Sync fill type buttons
+    if (DOM.thumbFillSolid && DOM.thumbFillGradient) {
+        const isGrad = state.thumbnailTextFillType === 'gradient';
+        DOM.thumbFillSolid.classList.toggle('active', !isGrad);
+        DOM.thumbFillGradient.classList.toggle('active', isGrad);
+    }
+    // Sync shadow select
+    if (DOM.thumbShadowSelect) DOM.thumbShadowSelect.value = state.thumbnailShadowStyle || 'retro3d';
+}
+
+// Synchronize manual layout transform sliders for active cutout
+function syncActiveCutoutSliders() {
+    if (activeSelectedCutout) {
+        DOM.thumbActiveScale.value = Math.round(activeSelectedCutout.scale * 100);
+        DOM.thumbActiveScaleVal.textContent = Math.round(activeSelectedCutout.scale * 100) + '%';
+        const degrees = Math.round(activeSelectedCutout.rotation * 180 / Math.PI);
+        DOM.thumbActiveRotation.value = degrees;
+        DOM.thumbActiveRotationVal.textContent = degrees + '°';
+        
+        DOM.thumbManualControlsCard.style.opacity = '1';
+        DOM.thumbManualControlsCard.style.pointerEvents = 'auto';
+    } else {
+        DOM.thumbManualControlsCard.style.opacity = '0.6';
+        DOM.thumbManualControlsCard.style.pointerEvents = 'none';
+    }
+}
+
+// Drag & Drop event translation on workspace canvas
+function handleCanvasMouseDown(e) {
+    const canvas = DOM.thumbnailCanvas;
+    if (!canvas) return;
+    
+    const rect = canvas.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width * canvas.width;
+    const y = (e.clientY - rect.top) / rect.height * canvas.height;
+    
+    // 1. Text click test
+    if (state.thumbnailCaption) {
+        const tx = (state.thumbnailTextX / 100) * canvas.width;
+        const ty = (state.thumbnailTextY / 100) * canvas.height;
+        const ctx = canvas.getContext('2d');
+        ctx.font = `bold ${state.thumbnailFontSize}px "${state.thumbnailFont}"`;
+        
+        const lines = state.thumbnailCaption.split('\n');
+        const lineHeight = state.thumbnailFontSize * 1.15;
+        let maxLineWidth = 0;
+        lines.forEach(line => {
+            const width = ctx.measureText(line).width;
+            if (width > maxLineWidth) maxLineWidth = width;
+        });
+        const textH = lines.length * lineHeight;
+        
+        const dx = x - tx;
+        const dy = y - ty;
+        
+        if (Math.abs(dx) < (maxLineWidth/2 + 20) && Math.abs(dy) < (textH/2 + 20)) {
+            activeSelectedElement = 'text';
+            activeSelectedCutout = null;
+            
+            thumbDragSession.activeElement = 'text';
+            thumbDragSession.isDragging = true;
+            thumbDragSession.startX = x;
+            thumbDragSession.startY = y;
+            thumbDragSession.elemStartX = state.thumbnailTextX;
+            thumbDragSession.elemStartY = state.thumbnailTextY;
+            
+            if (state.thumbnailMode === 'auto') {
+                state.thumbnailMode = 'manual';
+                syncModeUI();
+            }
+            
+            highlightActiveSelectCard();
+            syncActiveCutoutSliders();
+            drawThumbnail();
+            return;
+        }
+    }
+    
+    // 2. Cutouts click test (topmost z-index first)
+    const visibleCutouts = state.thumbnailCutouts
+        .filter(c => c.visible)
+        .sort((a, b) => b.zIndex - a.zIndex);
+        
+    for (const config of visibleCutouts) {
+        const slide = state.slides.find(s => s.id === config.slideId);
+        if (!slide || !slide.cutout) continue;
+        
+        const cx = (config.x / 100) * canvas.width;
+        const cy = (config.y / 100) * canvas.height;
+        
+        const scale = config.scale * (canvas.width / 1080);
+        const destW = slide.cutout.width * scale;
+        const destH = slide.cutout.height * scale;
+        
+        const dx = x - cx;
+        const dy = y - cy;
+        
+        if (Math.abs(dx) < destW/2 && Math.abs(dy) < destH/2) {
+            activeSelectedCutout = config;
+            activeSelectedElement = config;
+            
+            thumbDragSession.activeElement = config;
+            thumbDragSession.isDragging = true;
+            thumbDragSession.startX = x;
+            thumbDragSession.startY = y;
+            thumbDragSession.elemStartX = config.x;
+            thumbDragSession.elemStartY = config.y;
+            
+            if (state.thumbnailMode === 'auto') {
+                state.thumbnailMode = 'manual';
+                syncModeUI();
+            }
+            
+            highlightActiveSelectCard();
+            syncActiveCutoutSliders();
+            drawThumbnail();
+            return;
+        }
+    }
+    
+    // 3. Clear selection on background click
+    activeSelectedCutout = null;
+    activeSelectedElement = null;
+    thumbDragSession.activeElement = null;
+    thumbDragSession.isDragging = false;
+    
+    highlightActiveSelectCard();
+    syncActiveCutoutSliders();
+    drawThumbnail();
+}
+
+function handleCanvasMouseMove(e) {
+    if (!thumbDragSession.isDragging || !thumbDragSession.activeElement) return;
+    
+    const canvas = DOM.thumbnailCanvas;
+    if (!canvas) return;
+    
+    const rect = canvas.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width * canvas.width;
+    const y = (e.clientY - rect.top) / rect.height * canvas.height;
+    
+    const deltaX = (x - thumbDragSession.startX) / canvas.width * 100;
+    const deltaY = (y - thumbDragSession.startY) / canvas.height * 100;
+    
+    if (thumbDragSession.activeElement === 'text') {
+        state.thumbnailTextX = Math.max(0, Math.min(100, thumbDragSession.elemStartX + deltaX));
+        state.thumbnailTextY = Math.max(0, Math.min(100, thumbDragSession.elemStartY + deltaY));
+    } else {
+        const config = thumbDragSession.activeElement;
+        config.x = Math.max(0, Math.min(100, thumbDragSession.elemStartX + deltaX));
+        config.y = Math.max(0, Math.min(100, thumbDragSession.elemStartY + deltaY));
+    }
+    
+    drawThumbnail();
+}
+
+function handleCanvasMouseUp() {
+    if (thumbDragSession.isDragging) {
+        thumbDragSession.isDragging = false;
+        triggerAutosave();
+    }
+}
+
+// Touch controls helper mapping
+function handleCanvasTouchStart(e) {
+    if (e.touches.length === 1) {
+        handleCanvasMouseDown(e.touches[0]);
+    }
+}
+
+// Auto Collage Generator
+function generateAutoThumbnail() {
+    const gradients = [
+        { start: '#ff4b8b', end: '#2b1055' },
+        { start: '#00c6ff', end: '#0072ff' },
+        { start: '#f857a6', end: '#ff5858' },
+        { start: '#11998e', end: '#38ef7d' },
+        { start: '#ff9966', end: '#ff5e62' },
+        { start: '#a8c0ff', end: '#3f2b96' },
+        { start: '#141e30', end: '#243b55' }
+    ];
+    const grad = gradients[Math.floor(Math.random() * gradients.length)];
+    state.thumbnailBgType = 'gradient';
+    state.thumbnailBgGradStart = grad.start;
+    state.thumbnailBgGradEnd = grad.end;
+    
+    if (DOM.thumbBgColor1) DOM.thumbBgColor1.value = grad.start;
+    if (DOM.thumbBgColor2) DOM.thumbBgColor2.value = grad.end;
+    if (DOM.thumbBgTypeSelect) DOM.thumbBgTypeSelect.value = 'gradient';
+    syncBackgroundUI();
+    
+    const availableSlides = state.slides.filter(s => s.mask);
+    if (availableSlides.length === 0) {
+        showToast("⚠️ Add photos and make cutouts in Step 2 first!", "warning");
+        return;
+    }
+    
+    state.thumbnailCutouts = availableSlides.map((slide, idx) => {
+        return {
+            slideId: slide.id,
+            x: 50,
+            y: 50,
+            scale: 0.8,
+            rotation: 0,
+            zIndex: idx,
+            visible: false
+        };
+    });
+    
+    const countToSelect = Math.min(3, availableSlides.length);
+    const indices = Array.from({ length: availableSlides.length }, (_, i) => i);
+    for (let i = indices.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [indices[i], indices[j]] = [indices[j], indices[i]];
+    }
+    
+    const selectedIndices = indices.slice(0, countToSelect);
+    
+    if (countToSelect === 1) {
+        const item = state.thumbnailCutouts[selectedIndices[0]];
+        item.visible = true;
+        item.x = 50;
+        item.y = 45;
+        item.scale = 1.0;
+        item.rotation = 0;
+    } else if (countToSelect === 2) {
+        const item1 = state.thumbnailCutouts[selectedIndices[0]];
+        item1.visible = true;
+        item1.x = 32;
+        item1.y = 45;
+        item1.scale = 0.85;
+        item1.rotation = -0.15;
+        item1.zIndex = 0;
+        
+        const item2 = state.thumbnailCutouts[selectedIndices[1]];
+        item2.visible = true;
+        item2.x = 68;
+        item2.y = 48;
+        item2.scale = 0.85;
+        item2.rotation = 0.12;
+        item2.zIndex = 1;
+    } else if (countToSelect >= 3) {
+        const item1 = state.thumbnailCutouts[selectedIndices[0]];
+        item1.visible = true;
+        item1.x = 28;
+        item1.y = 48;
+        item1.scale = 0.75;
+        item1.rotation = -0.2;
+        item1.zIndex = 0;
+        
+        const item2 = state.thumbnailCutouts[selectedIndices[1]];
+        item2.visible = true;
+        item2.x = 72;
+        item2.y = 52;
+        item2.scale = 0.75;
+        item2.rotation = 0.18;
+        item2.zIndex = 1;
+        
+        const item3 = state.thumbnailCutouts[selectedIndices[2]];
+        item3.visible = true;
+        item3.x = 50;
+        item3.y = 42;
+        item3.scale = 0.95;
+        item3.rotation = -0.05;
+        item3.zIndex = 2;
+    }
+    
+    state.thumbnailCaption = state.slides[0]?.text || 'MEMORY LANE';
+    if (!state.thumbnailCaption || state.thumbnailCaption === 'Memory Moment') {
+        state.thumbnailCaption = 'MY JOURNAL';
+    }
+    state.thumbnailCaption = state.thumbnailCaption.toUpperCase();
+    if (DOM.thumbCaptionInput) DOM.thumbCaptionInput.value = state.thumbnailCaption;
+    
+    state.thumbnailFont = 'Dela Gothic One';
+    if (DOM.thumbFontSelect) DOM.thumbFontSelect.value = 'Dela Gothic One';
+    
+    state.thumbnailFontSize = 75;
+    if (DOM.thumbFontSize) DOM.thumbFontSize.value = 75;
+    if (DOM.thumbFontSizeVal) DOM.thumbFontSizeVal.textContent = '75px';
+    
+    state.thumbnailTextColor = '#ffffff';
+    if (DOM.thumbCaptionColor) DOM.thumbCaptionColor.value = '#ffffff';
+    
+    state.thumbnailStrokeColor = '#000000';
+    if (DOM.thumbCaptionStroke) DOM.thumbCaptionStroke.value = '#000000';
+    
+    state.thumbnailStrokeWidth = 8;
+    if (DOM.thumbStrokeWidth) DOM.thumbStrokeWidth.value = 8;
+    if (DOM.thumbStrokeWidthVal) DOM.thumbStrokeWidthVal.textContent = '8px';
+    
+    state.thumbnailTextX = 50;
+    state.thumbnailTextY = 82;
+    
+    renderCutoutSelectionList();
+    drawThumbnail();
+    showToast("⚡ Procedurally designed a gorgeous cover collage!", "success");
+}
+
+function handleCanvasTouchMove(e) {
+    if (e.touches.length === 1) {
+        handleCanvasMouseMove(e.touches[0]);
+        e.preventDefault();
+    }
+}
+
+// Open modal trigger
+function openThumbnailDesigner() {
+    DOM.thumbnailModal.style.display = 'flex';
+    
+    if (state.isPlaying) {
+        togglePlayback();
+    }
+    
+    resizeThumbnailCanvas();
+    
+    // Populating blurred photo dropdown
+    if (DOM.thumbBgBlurSelect) {
+        DOM.thumbBgBlurSelect.innerHTML = '';
+        state.slides.forEach((slide, idx) => {
+            const opt = document.createElement('option');
+            opt.value = idx;
+            opt.textContent = `Photo ${idx + 1}: ${slide.text.substring(0, 15) || 'Moment'}`;
+            DOM.thumbBgBlurSelect.appendChild(opt);
+        });
+        DOM.thumbBgBlurSelect.value = state.thumbnailBgBlurIdx;
+    }
+    
+    // Sync UI elements
+    syncModeUI();
+    syncBackgroundUI();
+    syncCaptionFormUI();
+    
+    const availableSlides = state.slides.filter(s => s.mask);
+    if (state.thumbnailCutouts.length === 0 && availableSlides.length > 0) {
+        generateAutoThumbnail();
+    } else {
+        renderCutoutSelectionList();
+        drawThumbnail();
+    }
+}
+
+function closeThumbnailDesigner() {
+    DOM.thumbnailModal.style.display = 'none';
+    activeSelectedCutout = null;
+    activeSelectedElement = null;
+}
+
+function saveThumbnailDesigner() {
+    const canvas = DOM.thumbnailCanvas;
+    if (!canvas) return;
+    
+    state.thumbnailDataUrl = canvas.toDataURL('image/png');
+    updateThumbnailPreviewUI();
+    triggerAutosave();
+    closeThumbnailDesigner();
+    showToast("✓ Cover Art design saved & applied!", "success");
+}
+
+function downloadThumbnailPNG() {
+    const canvas = DOM.thumbnailCanvas;
+    if (!canvas) return;
+    
+    const link = document.createElement('a');
+    link.download = `collage_cover_${Date.now()}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+}
+
+function highlightActiveSelectCard() {
+    renderCutoutSelectionList();
+}
+
+// Bind all events in the Cover Art Modal
+function setupThumbnailEventListeners() {
+    if (!DOM.btnOpenThumbnailDesigner) return;
+    
+    DOM.btnOpenThumbnailDesigner.addEventListener('click', openThumbnailDesigner);
+    DOM.thumbnailModalClose.addEventListener('click', closeThumbnailDesigner);
+    DOM.thumbnailModalOverlay.addEventListener('click', closeThumbnailDesigner);
+    DOM.btnThumbSave.addEventListener('click', saveThumbnailDesigner);
+    DOM.btnThumbDownload.addEventListener('click', downloadThumbnailPNG);
+    
+    // Design Mode Toggles
+    DOM.btnThumbModeAuto.addEventListener('click', () => {
+        state.thumbnailMode = 'auto';
+        syncModeUI();
+        triggerAutosave();
+    });
+    DOM.btnThumbModeManual.addEventListener('click', () => {
+        state.thumbnailMode = 'manual';
+        syncModeUI();
+        triggerAutosave();
+    });
+    DOM.btnThumbAutoGenerate.addEventListener('click', generateAutoThumbnail);
+    
+    // Background changes
+    DOM.thumbBgTypeSelect.addEventListener('change', (e) => {
+        state.thumbnailBgType = e.target.value;
+        syncBackgroundUI();
+        drawThumbnail();
+        triggerAutosave();
+    });
+    DOM.thumbBgColor1.addEventListener('input', (e) => {
+        if (state.thumbnailBgType === 'solid') {
+            state.thumbnailBgColor = e.target.value;
+        } else {
+            state.thumbnailBgGradStart = e.target.value;
+        }
+        drawThumbnail();
+        triggerAutosave();
+    });
+    DOM.thumbBgColor2.addEventListener('input', (e) => {
+        state.thumbnailBgGradEnd = e.target.value;
+        drawThumbnail();
+        triggerAutosave();
+    });
+    DOM.thumbBgBlurSelect.addEventListener('change', (e) => {
+        state.thumbnailBgBlurIdx = parseInt(e.target.value);
+        drawThumbnail();
+        triggerAutosave();
+    });
+    
+    // Manual transformation sliders
+    DOM.thumbActiveScale.addEventListener('input', (e) => {
+        if (activeSelectedCutout) {
+            activeSelectedCutout.scale = parseFloat(e.target.value) / 100;
+            DOM.thumbActiveScaleVal.textContent = e.target.value + '%';
+            drawThumbnail();
+        }
+    });
+    DOM.thumbActiveScale.addEventListener('change', () => triggerAutosave());
+    
+    DOM.thumbActiveRotation.addEventListener('input', (e) => {
+        if (activeSelectedCutout) {
+            activeSelectedCutout.rotation = parseFloat(e.target.value) * Math.PI / 180;
+            DOM.thumbActiveRotationVal.textContent = e.target.value + '°';
+            drawThumbnail();
+        }
+    });
+    DOM.thumbActiveRotation.addEventListener('change', () => triggerAutosave());
+    
+    // Layers depth reordering
+    DOM.btnThumbLayerUp.addEventListener('click', () => {
+        if (!activeSelectedCutout) return;
+        const currentIdx = activeSelectedCutout.zIndex;
+        const nextCutout = state.thumbnailCutouts
+            .filter(c => c.visible && c.zIndex > currentIdx)
+            .sort((a, b) => a.zIndex - b.zIndex)[0];
+            
+        if (nextCutout) {
+            activeSelectedCutout.zIndex = nextCutout.zIndex;
+            nextCutout.zIndex = currentIdx;
+            drawThumbnail();
+            triggerAutosave();
+        }
+    });
+    
+    DOM.btnThumbLayerDown.addEventListener('click', () => {
+        if (!activeSelectedCutout) return;
+        const currentIdx = activeSelectedCutout.zIndex;
+        const prevCutout = state.thumbnailCutouts
+            .filter(c => c.visible && c.zIndex < currentIdx)
+            .sort((a, b) => b.zIndex - a.zIndex)[0];
+            
+        if (prevCutout) {
+            activeSelectedCutout.zIndex = prevCutout.zIndex;
+            prevCutout.zIndex = currentIdx;
+            drawThumbnail();
+            triggerAutosave();
+        }
+    });
+    
+    // Caption Overlay edits
+    DOM.thumbCaptionInput.addEventListener('input', (e) => {
+        state.thumbnailCaption = e.target.value;
+        drawThumbnail();
+    });
+    DOM.thumbCaptionInput.addEventListener('change', () => triggerAutosave());
+    
+    DOM.thumbFontSelect.addEventListener('change', (e) => {
+        state.thumbnailFont = e.target.value;
+        drawThumbnail();
+        triggerAutosave();
+    });
+    
+    DOM.thumbCaptionColor.addEventListener('input', (e) => {
+        state.thumbnailTextColor = e.target.value;
+        drawThumbnail();
+        triggerAutosave();
+    });
+    
+    DOM.thumbCaptionStroke.addEventListener('input', (e) => {
+        state.thumbnailStrokeColor = e.target.value;
+        drawThumbnail();
+        triggerAutosave();
+    });
+    
+    DOM.thumbFontSize.addEventListener('input', (e) => {
+        state.thumbnailFontSize = parseInt(e.target.value);
+        DOM.thumbFontSizeVal.textContent = e.target.value + 'px';
+        drawThumbnail();
+    });
+    DOM.thumbFontSize.addEventListener('change', () => triggerAutosave());
+    
+    DOM.thumbStrokeWidth.addEventListener('input', (e) => {
+        state.thumbnailStrokeWidth = parseInt(e.target.value);
+        DOM.thumbStrokeWidthVal.textContent = e.target.value + 'px';
+        drawThumbnail();
+    });
+    DOM.thumbStrokeWidth.addEventListener('change', () => triggerAutosave());
+    
+    // Caption Gradient End color
+    if (DOM.thumbCaptionGradEnd) {
+        DOM.thumbCaptionGradEnd.addEventListener('input', (e) => {
+            state.thumbnailGradEnd = e.target.value;
+            drawThumbnail();
+        });
+        DOM.thumbCaptionGradEnd.addEventListener('change', () => triggerAutosave());
+    }
+    
+    // Text fill type toggle (Solid / Gradient)
+    if (DOM.thumbFillSolid) {
+        DOM.thumbFillSolid.addEventListener('click', () => {
+            state.thumbnailTextFillType = 'solid';
+            DOM.thumbFillSolid.classList.add('active');
+            DOM.thumbFillGradient.classList.remove('active');
+            drawThumbnail();
+            triggerAutosave();
+        });
+    }
+    if (DOM.thumbFillGradient) {
+        DOM.thumbFillGradient.addEventListener('click', () => {
+            state.thumbnailTextFillType = 'gradient';
+            DOM.thumbFillGradient.classList.add('active');
+            DOM.thumbFillSolid.classList.remove('active');
+            drawThumbnail();
+            triggerAutosave();
+        });
+    }
+    
+    // Shadow style preset selector
+    if (DOM.thumbShadowSelect) {
+        DOM.thumbShadowSelect.addEventListener('change', (e) => {
+            state.thumbnailShadowStyle = e.target.value;
+            drawThumbnail();
+            triggerAutosave();
+        });
+    }
+    
+    // Color preset swatch buttons
+    if (DOM.thumbColorPresets) {
+        // Color preset lookup table
+        const PRESETS = {
+            white:  { fill: '#ffffff', grad: '#cccccc', fillType: 'solid' },
+            yellow: { fill: '#FFD700', grad: '#FF8C00', fillType: 'solid' },
+            sunset: { fill: '#FF6B35', grad: '#FFD700', fillType: 'gradient' },
+            candy:  { fill: '#FF6EC7', grad: '#B9F2FF', fillType: 'gradient' },
+            cyber:  { fill: '#00FFFF', grad: '#FF00FF', fillType: 'gradient' },
+            gold:   { fill: '#FCF6BA', grad: '#BF953F', fillType: 'gradient' },
+            neon:   { fill: '#39FF14', grad: '#00FF00', fillType: 'solid' },
+            fire:   { fill: '#FF416C', grad: '#FF4B2B', fillType: 'gradient' }
+        };
+        DOM.thumbColorPresets.querySelectorAll('.color-preset-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const preset = PRESETS[btn.dataset.preset];
+                if (!preset) return;
+                // Remove active from all
+                DOM.thumbColorPresets.querySelectorAll('.color-preset-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                // Apply colors
+                state.thumbnailTextColor = preset.fill;
+                state.thumbnailGradEnd = preset.grad;
+                state.thumbnailTextFillType = preset.fillType;
+                if (DOM.thumbCaptionColor) DOM.thumbCaptionColor.value = preset.fill;
+                if (DOM.thumbCaptionGradEnd) DOM.thumbCaptionGradEnd.value = preset.grad;
+                if (DOM.thumbFillSolid && DOM.thumbFillGradient) {
+                    DOM.thumbFillSolid.classList.toggle('active', preset.fillType === 'solid');
+                    DOM.thumbFillGradient.classList.toggle('active', preset.fillType === 'gradient');
+                }
+                drawThumbnail();
+                triggerAutosave();
+            });
+        });
+    }
+    
+    // Bind Canvas click/drag interactions
+    const canvas = DOM.thumbnailCanvas;
+    canvas.addEventListener('mousedown', handleCanvasMouseDown);
+    window.addEventListener('mousemove', handleCanvasMouseMove);
+    window.addEventListener('mouseup', handleCanvasMouseUp);
+    
+    // Touch interactions
+    canvas.addEventListener('touchstart', handleCanvasTouchStart);
+    canvas.addEventListener('touchmove', handleCanvasTouchMove, { passive: false });
+    canvas.addEventListener('touchend', handleCanvasMouseUp);
+    
+    // Recalculate on screen resize
+    window.addEventListener('resize', () => {
+        if (DOM.thumbnailModal.style.display === 'flex') {
+            resizeThumbnailCanvas();
+            drawThumbnail();
+        }
+    });
 }

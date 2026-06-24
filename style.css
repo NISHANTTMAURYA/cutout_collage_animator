@@ -1548,3 +1548,206 @@ input, textarea, [contenteditable="true"], .caption-input {
     height: 200px;
   }
 }
+
+/* ============================================================
+   Thumbnail / Cover Art Designer Styles
+   ============================================================ */
+.thumbnail-modal-grid {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 20px;
+  height: calc(85vh - 70px);
+  min-height: 480px;
+  max-height: 640px;
+  overflow: hidden;
+}
+
+.thumbnail-workspace {
+  background: var(--bg-preview);
+  border-radius: var(--r-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  position: relative;
+  flex: 1;
+}
+
+.thumbnail-canvas-container {
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+  background: #000;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  max-height: 100%;
+  max-width: 100%;
+}
+
+.thumbnail-canvas-container canvas {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  cursor: crosshair;
+}
+
+/* Control Panel */
+.thumbnail-controls-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow-y: auto;
+  padding-right: 8px;
+  gap: 12px;
+}
+
+.thumbnail-controls-panel::-webkit-scrollbar {
+  width: 4px;
+}
+.thumbnail-controls-panel::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 2px;
+}
+
+.thumbnail-section-card {
+  background: var(--panel-inner);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.thumbnail-section-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Selectable Cutout Cards List */
+.cutout-selection-list {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  max-height: 125px;
+  overflow-y: auto;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-xs);
+  background: var(--panel);
+}
+
+.cutout-selection-list::-webkit-scrollbar {
+  width: 3px;
+}
+.cutout-selection-list::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 1.5px;
+}
+
+.cutout-select-card {
+  position: relative;
+  border-radius: var(--r-xs);
+  border: 2px solid var(--border);
+  background: var(--panel-inner);
+  aspect-ratio: 1;
+  cursor: pointer;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--tf);
+}
+
+.cutout-select-card:hover {
+  border-color: var(--accent-2);
+}
+
+.cutout-select-card.selected {
+  border-color: var(--accent);
+  background: var(--panel);
+}
+
+.cutout-select-card.active-selected {
+  border-color: var(--accent-dark);
+  box-shadow: 0 0 0 2px var(--accent-glow);
+}
+
+.cutout-select-card img {
+  max-width: 85%;
+  max-height: 85%;
+  object-fit: contain;
+}
+
+.cutout-badge-checkbox {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: var(--border-strong);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 8px;
+  color: #fff;
+  transition: all var(--tf);
+}
+
+.cutout-select-card.selected .cutout-badge-checkbox {
+  background: var(--success);
+}
+
+@media (max-width: 768px) {
+  .thumbnail-modal-grid {
+    grid-template-columns: 1fr;
+    height: auto;
+    max-height: none;
+    overflow-y: auto;
+  }
+  .thumbnail-workspace {
+    height: 350px;
+  }
+}
+
+/* ============================================================
+   Color Preset Swatches (Thumbnail Caption Fill)
+   ============================================================ */
+.color-preset-btn {
+  padding: 4px 7px;
+  font-size: 9px;
+  font-weight: 700;
+  border-radius: 4px;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  line-height: 1;
+}
+.color-preset-btn:hover {
+  transform: scale(1.08);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+}
+.color-preset-btn.active {
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 2px var(--accent-glow), 0 2px 8px rgba(0,0,0,0.25);
+  transform: scale(1.06);
+}
+
+/* Drop zone icon sizing (SVG replacing emoji) */
+.drop-icon svg {
+  display: block;
+  color: var(--text-lo);
+  opacity: 0.6;
+}

@@ -7,8 +7,8 @@
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@500;600;700&family=Outfit:wght@300;400;600;800&family=Playfair+Display:ital,wght@0,700;1,400&family=Satisfy&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=17">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@500;600;700&family=Outfit:wght@300;400;600;800&family=Playfair+Display:ital,wght@0,700;1,400&family=Satisfy&family=Dela+Gothic+One&family=Anton&family=Syne:wght@800&family=Bungee&family=Bebas+Neue&family=Montserrat:wght@700;900&family=Poppins:wght@700;900&family=Oswald:wght@700&family=Righteous&family=Lilita+One&family=Changa+One:ital@0;1&family=Black+Han+Sans&family=Titan+One&family=Graduate&family=Russo+One&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css?v=19">
 </head>
 <body>
     <div class="app-layout">
@@ -16,7 +16,7 @@
         <header class="app-header-top">
             <div class="header-left">UI Cards</div>
             <div class="app-logo-badge">
-                <span class="logo-text">✨ Cutout Collage</span>
+                <span class="logo-text"><i data-lucide="layers" style="width:14px;height:14px;vertical-align:middle;margin-right:5px;"></i>Cutout Collage</span>
                 <div id="ai-badge" class="ai-badge badge-connecting">Connecting...</div>
             </div>
             <div class="header-right">Video editor</div>
@@ -32,19 +32,19 @@
                     <div class="card-content">
                         <nav class="steps-nav">
                             <button class="step-btn active" id="btn-step-upload" data-step="1">
-                                <span class="step-icon">📁</span>
+                                <span class="step-icon"><i data-lucide="folder" style="width: 16px; height: 16px;"></i></span>
                                 <span class="step-label">1. Upload Photos</span>
                             </button>
                             <button class="step-btn" id="btn-step-cutout" data-step="2" disabled>
-                                <span class="step-icon">✂️</span>
+                                <span class="step-icon"><i data-lucide="scissors" style="width: 16px; height: 16px;"></i></span>
                                 <span class="step-label">2. Cutout Editor</span>
                             </button>
                             <button class="step-btn" id="btn-step-design" data-step="3" disabled>
-                                <span class="step-icon">🖼️</span>
+                                <span class="step-icon"><i data-lucide="image" style="width: 16px; height: 16px;"></i></span>
                                 <span class="step-label">3. Customize Video</span>
                             </button>
                             <button class="step-btn" id="btn-step-export" data-step="4" disabled>
-                                <span class="step-icon">⚙️</span>
+                                <span class="step-icon"><i data-lucide="settings" style="width: 16px; height: 16px;"></i></span>
                                 <span class="step-label">4. Render & Export</span>
                             </button>
                         </nav>
@@ -59,7 +59,7 @@
                         <div class="drop-zone" id="drop-zone">
                             <input type="file" id="file-input" multiple accept="image/*" class="file-input">
                             <div class="drop-zone-content">
-                                <span class="drop-icon">📸</span>
+                                <span class="drop-icon"><i data-lucide="image-plus" style="width:28px;height:28px;"></i></span>
                                 <p class="drop-title">Drag & Drop Photos</p>
                                 <p class="drop-or">or click to browse</p>
                             </div>
@@ -84,17 +84,17 @@
                     <div class="workspace-center">
                 <!-- Center Toolbar -->
                 <div class="center-toolbar-pill">
-                    <button class="tb-btn active" title="Select Tool">📐</button>
-                    <button class="tb-btn" title="Cutout Magic">✂️</button>
-                    <button class="tb-btn" title="Background">🖼️</button>
-                    <button class="tb-btn" title="Rotate">⟳</button>
-                    <button class="tb-btn" id="tb-btn-project" title="Active Project">⚙️</button>
+                    <button class="tb-btn active" title="Select Tool"><i data-lucide="mouse-pointer-2" style="width:15px;height:15px;"></i></button>
+                    <button class="tb-btn" title="Cutout Magic"><i data-lucide="scissors" style="width:15px;height:15px;"></i></button>
+                    <button class="tb-btn" title="Background"><i data-lucide="image" style="width:15px;height:15px;"></i></button>
+                    <button class="tb-btn" title="Rotate"><i data-lucide="rotate-cw" style="width:15px;height:15px;"></i></button>
+                    <button class="tb-btn" id="tb-btn-project" title="Active Project"><i data-lucide="folder-open" style="width:15px;height:15px;"></i></button>
                     <div class="project-selector-wrapper" style="margin-left: 8px;">
                         <select id="project-select" class="custom-select project-dropdown" title="Active Project"></select>
                     </div>
-                    <button class="project-action-btn" id="btn-new-project" title="Create New Project">＋</button>
-                    <button class="project-action-btn" id="btn-rename-project" title="Rename Project">✏️</button>
-                    <button class="project-action-btn" id="btn-delete-project" title="Delete Project">🗑️</button>
+                    <button class="project-action-btn" id="btn-new-project" title="Create New Project"><i data-lucide="plus" style="width:13px;height:13px;"></i></button>
+                    <button class="project-action-btn" id="btn-rename-project" title="Rename Project"><i data-lucide="pencil" style="width:13px;height:13px;"></i></button>
+                    <button class="project-action-btn" id="btn-delete-project" title="Delete Project"><i data-lucide="trash-2" style="width:13px;height:13px;"></i></button>
                 </div>
 
                 <!-- Preview Screen Card -->
@@ -115,9 +115,9 @@
                 <!-- Playback HUD Pill -->
                 <div class="playback-hud-pill">
                     <div class="hud-controls-left">
-                        <button class="hud-control-btn" id="hud-rewind-btn" title="Rewind 3s">⏪</button>
-                        <button class="hud-play-btn" id="hud-play-btn">⏸️</button>
-                        <button class="hud-control-btn" id="hud-forward-btn" title="Forward 3s">⏩</button>
+                        <button class="hud-control-btn" id="hud-rewind-btn" title="Rewind 3s"><i data-lucide="skip-back" style="width:14px;height:14px;"></i></button>
+                        <button class="hud-play-btn" id="hud-play-btn"><i data-lucide="play" style="width:16px;height:16px;"></i></button>
+                        <button class="hud-control-btn" id="hud-forward-btn" title="Forward 3s"><i data-lucide="skip-forward" style="width:14px;height:14px;"></i></button>
                     </div>
                     <div class="hud-timeline-center">
                         <div class="hud-progress-bar" id="hud-progress-bar">
@@ -170,10 +170,10 @@
                                 </div>
                                 <div class="editor-controls">
                                     <div class="control-row" style="grid-template-columns: repeat(4, 1fr); gap: 6px;">
-                                        <button class="editor-tool-btn active" id="tool-brush" title="Paint cutout area">✏️ Brush</button>
-                                        <button class="editor-tool-btn" id="tool-eraser" title="Erase cutout area">🧽 Erase</button>
-                                        <button class="editor-tool-btn" id="tool-magic" title="AI Magic subject detection">🪄 Magic</button>
-                                        <button class="editor-tool-btn" id="tool-clear" title="Clear mask completely">❌ Clear</button>
+                                        <button class="editor-tool-btn active" id="tool-brush" title="Paint cutout area"><i data-lucide="brush" style="width: 12px; height: 12px; margin-right: 4px; vertical-align: middle;"></i>Brush</button>
+                                        <button class="editor-tool-btn" id="tool-eraser" title="Erase cutout area"><i data-lucide="eraser" style="width: 12px; height: 12px; margin-right: 4px; vertical-align: middle;"></i>Erase</button>
+                                        <button class="editor-tool-btn" id="tool-magic" title="AI Magic subject detection"><i data-lucide="wand-2" style="width: 12px; height: 12px; margin-right: 4px; vertical-align: middle;"></i>Magic</button>
+                                        <button class="editor-tool-btn" id="tool-clear" title="Clear mask completely"><i data-lucide="trash-2" style="width: 12px; height: 12px; margin-right: 4px; vertical-align: middle;"></i>Clear</button>
                                     </div>
                                     <div class="control-slider-group">
                                         <div class="slider-header">
@@ -215,7 +215,7 @@
                                     <div class="control-slider-group">
                                         <div class="slider-header">
                                             <span>Slide Duration: <span id="slide-dur-val">1.5s</span></span>
-                                            <button class="info-btn-timing" id="info-btn-duration" title="How Slide Duration works">ℹ️</button>
+                                            <button class="info-btn-timing" id="info-btn-duration" title="How Slide Duration works"><i data-lucide="info" style="width:12px;height:12px;"></i></button>
                                         </div>
                                         <input type="range" id="slide-duration" min="0.5" max="6.0" step="0.5" value="1.5" class="custom-slider">
                                         
@@ -223,7 +223,7 @@
                                             <span style="font-size: 11px; text-transform: uppercase; color: var(--text-mid);">Sync Mode:</span>
                                             <div class="segmented-control" style="display: flex; flex: 1;">
                                                 <button type="button" id="speed-mode-manual" class="segment-btn active">Manual</button>
-                                                <button type="button" id="speed-mode-auto" class="segment-btn">⚡ Auto Sync</button>
+                                                <button type="button" id="speed-mode-auto" class="segment-btn"><i data-lucide="zap" style="width:11px;height:11px;margin-right:3px;vertical-align:middle;"></i>Auto Sync</button>
                                             </div>
                                         </div>
                                     </div>
@@ -231,7 +231,7 @@
                                     <div class="control-slider-group">
                                         <div class="slider-header">
                                             <span>Cutout Hold Duration: <span id="cutout-hold-val">35%</span></span>
-                                            <button class="info-btn-timing" id="info-btn-hold" title="How Cutout Hold Duration works">ℹ️</button>
+                                            <button class="info-btn-timing" id="info-btn-hold" title="How Cutout Hold Duration works"><i data-lucide="info" style="width:12px;height:12px;"></i></button>
                                         </div>
                                         <input type="range" id="cutout-hold" min="10" max="80" step="5" value="35" class="custom-slider">
                                     </div>
@@ -250,40 +250,40 @@
                                     <div class="control-slider-group">
                                         <label for="video-aspect-ratio">Video Aspect Ratio:</label>
                                         <select id="video-aspect-ratio" class="custom-select">
-                                            <option value="9-16" selected>📱 Vertical / Reels (9:16)</option>
-                                            <option value="16-9">🖥️ Landscape / YouTube (16:9)</option>
-                                            <option value="1-1">⏹️ Square / Post (1:1)</option>
-                                            <option value="4-5">📸 Portrait / Instagram (4:5)</option>
+                                            <option value="9-16" selected>Vertical / Reels (9:16)</option>
+                                            <option value="16-9">Landscape / YouTube (16:9)</option>
+                                            <option value="1-1">Square / Post (1:1)</option>
+                                            <option value="4-5">Portrait / Instagram (4:5)</option>
                                         </select>
                                     </div>
 
                                     <div class="control-slider-group">
                                         <label>Scatter Rotation Layout:</label>
                                         <div class="panel-actions" style="margin-top: 0; padding-top: 2px; gap: 8px; flex-direction: row;">
-                                            <button type="button" class="secondary-btn" id="btn-rotate-random" style="font-size: 11px; padding: 8px 6px;">🎲 Random Scatter</button>
-                                            <button type="button" class="secondary-btn" id="btn-rotate-reset" style="font-size: 11px; padding: 8px 6px;">📐 Align Straight</button>
+                                            <button type="button" class="secondary-btn" id="btn-rotate-random" style="font-size: 11px; padding: 8px 6px; display: inline-flex; align-items: center; gap: 4px;"><i data-lucide="shuffle" style="width: 12px; height: 12px;"></i>Random Scatter</button>
+                                            <button type="button" class="secondary-btn" id="btn-rotate-reset" style="font-size: 11px; padding: 8px 6px; display: inline-flex; align-items: center; gap: 4px;"><i data-lucide="square" style="width: 12px; height: 12px;"></i>Align Straight</button>
                                         </div>
                                     </div>
 
                                     <div class="control-slider-group">
                                         <label for="caption-font-select">Caption Font:</label>
                                         <select id="caption-font-select" class="custom-select">
-                                            <option value="playfair" selected>🏛️ Playfair Display (Classic Serif)</option>
-                                            <option value="satisfy">✍️ Satisfy (Handwritten Cursive)</option>
-                                            <option value="outfit">📐 Outfit (Clean Modern)</option>
-                                            <option value="space">💻 Space Grotesk (Tech Monospace)</option>
+                                            <option value="playfair" selected>Playfair Display (Classic Serif)</option>
+                                            <option value="satisfy">Satisfy (Handwritten Cursive)</option>
+                                            <option value="outfit">Outfit (Clean Modern)</option>
+                                            <option value="space">Space Grotesk (Tech Monospace)</option>
                                         </select>
                                     </div>
 
                                     <div class="control-slider-group">
                                         <label for="music-track-select">Backing Music Track:</label>
                                         <select id="music-track-select" class="custom-select">
-                                            <option value="desi_boyz" selected>🎵 Subha Hone Na De (Desi Boyz)</option>
-                                            <option value="lofi">🎵 Lofi Dream (Synth Beat)</option>
-                                            <option value="custom">📁 Custom Audio File</option>
-                                            <option value="none">🔇 No Audio</option>
+                                            <option value="desi_boyz" selected>Subha Hone Na De (Desi Boyz)</option>
+                                            <option value="lofi">Lofi Dream (Synth Beat)</option>
+                                            <option value="custom">Custom Audio File</option>
+                                            <option value="none">No Audio</option>
                                         </select>
-                                        <button class="secondary-btn" id="btn-upload-music" style="display: none; margin-top: 8px;">📁 Select Custom Audio File</button>
+                                        <button class="secondary-btn" id="btn-upload-music" style="display: none; margin-top: 8px; align-items: center; gap: 4px;"><i data-lucide="folder" style="width: 12px; height: 12px;"></i>Select Custom Audio File</button>
                                         <input type="file" id="custom-audio-input" accept="audio/*" class="file-input" style="display: none;">
                                     </div>
 
@@ -340,6 +340,21 @@
                                 </div>
                                 
                                 <div class="settings-form">
+                                    <!-- Video Cover / Thumbnail -->
+                                    <div class="control-slider-group" style="margin-bottom: 20px;">
+                                        <label>Video Cover / Thumbnail:</label>
+                                        <div style="display: flex; gap: 12px; align-items: center; margin-top: 6px;">
+                                            <div id="thumbnail-preview-box" style="width: 70px; height: 95px; border: 1px solid var(--border-md); border-radius: var(--r-xs); overflow: hidden; background: var(--bg-preview); display: flex; align-items: center; justify-content: center; font-size: 10px; color: var(--text-lo); position: relative; flex-shrink: 0; box-shadow: var(--card-shadow);">
+                                                <span id="thumbnail-preview-placeholder" style="text-align: center; padding: 4px; line-height: 1.2;">No Cover</span>
+                                                <img id="thumbnail-preview-img" style="width: 100%; height: 100%; object-fit: cover; display: none;">
+                                            </div>
+                                            <div style="flex: 1; display: flex; flex-direction: column; gap: 6px;">
+                                                <button type="button" class="primary-btn" id="btn-open-thumbnail-designer" style="font-size: 11px; padding: 6px 12px; height: auto; border-radius: var(--r-xs); display: inline-flex; align-items: center; gap: 4px;"><i data-lucide="palette" style="width:12px;height:12px;"></i> Design Cover Art</button>
+                                                <span style="font-size: 9.5px; color: var(--text-mid); line-height: 1.3;">Designed cover art will be embedded directly inside your exported video clip.</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
                                     <div class="control-slider-group">
                                         <label for="export-resolution">Resolution:</label>
                                         <select id="export-resolution" class="custom-select">
@@ -366,9 +381,9 @@
                                 </div>
 
                                 <div class="panel-actions" style="flex-direction: column; gap: 8px;">
-                                    <button class="primary-btn wide-btn" id="btn-start-export">🎬 Start Render</button>
-                                    <button class="secondary-btn wide-btn" id="btn-cancel-export" style="display: none;">✕ Cancel Render</button>
-                                    <a id="btn-download-video" class="primary-btn wide-btn success-btn" style="display: none; text-align: center; text-decoration: none;">⬇️ Download Video</a>
+                                    <button class="primary-btn wide-btn" id="btn-start-export" style="display: flex; align-items: center; justify-content: center; gap: 6px;"><i data-lucide="play" style="width: 13px; height: 13px;"></i>Start Render</button>
+                                    <button class="secondary-btn wide-btn" id="btn-cancel-export" style="display: none; align-items: center; justify-content: center; gap: 6px;"><i data-lucide="x" style="width: 13px; height: 13px;"></i>Cancel Render</button>
+                                    <a id="btn-download-video" class="primary-btn wide-btn success-btn" style="display: none; align-items: center; justify-content: center; gap: 6px; text-decoration: none;"><i data-lucide="download" style="width: 13px; height: 13px;"></i>Download Video</a>
                                     <button class="secondary-btn wide-btn" id="back-to-3">← Back</button>
                                 </div>
                             </section>
@@ -383,7 +398,7 @@
                     <div class="timeline-card">
                         <div class="timeline-header-bar">
                             <span>Timeline Editor</span>
-                            <span class="timeline-zoom-tip">💡 Drag and drop photos on Step 1 to rearrange tracks</span>
+                            <span class="timeline-zoom-tip">Drag and drop photos on Step 1 to rearrange tracks</span>
                         </div>
                         <div class="timeline-tracks-container">
                             <!-- Playhead Line -->
@@ -392,33 +407,33 @@
                             <!-- Track 1: Video Track -->
                             <div class="timeline-track-row video-track">
                                 <div class="track-info">
-                                    <span class="track-icon">📸</span>
+                                    <span class="track-icon" style="display: inline-flex; align-items: center; justify-content: center;"><i data-lucide="video" style="width: 14px; height: 14px;"></i></span>
                                     <span class="track-name">Video Track</span>
                                 </div>
                                 <div class="track-timeline" id="timeline-video-cells">
                                     <!-- Populated dynamically to mirror slide thumbnails in sequence -->
                                 </div>
                             </div>
-
-                    <!-- Track 2: Audio Track -->
-                    <div class="timeline-track-row audio-track">
-                        <div class="track-info">
-                            <span class="track-icon">🎵</span>
-                            <span class="track-name">Audio Track</span>
-                        </div>
-                        <div class="track-timeline">
-                            <div class="timeline-audio-segment" id="timeline-audio-segment">
-                                🎵 Lofi Dream (15.0s)
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Track 3: Captions Track -->
-                    <div class="timeline-track-row text-track">
-                        <div class="track-info">
-                            <span class="track-icon">💬</span>
-                            <span class="track-name">Captions</span>
-                        </div>
+ 
+                     <!-- Track 2: Audio Track -->
+                     <div class="timeline-track-row audio-track">
+                         <div class="track-info">
+                             <span class="track-icon" style="display: inline-flex; align-items: center; justify-content: center;"><i data-lucide="music" style="width: 14px; height: 14px;"></i></span>
+                             <span class="track-name">Audio Track</span>
+                         </div>
+                         <div class="track-timeline">
+                             <div class="timeline-audio-segment" id="timeline-audio-segment">
+                                 Lofi Dream (15.0s)
+                             </div>
+                         </div>
+                     </div>
+ 
+                     <!-- Track 3: Captions Track -->
+                     <div class="timeline-track-row text-track">
+                         <div class="track-info">
+                             <span class="track-icon" style="display: inline-flex; align-items: center; justify-content: center;"><i data-lucide="message-square" style="width: 14px; height: 14px;"></i></span>
+                             <span class="track-name">Captions</span>
+                         </div>
                         <div class="track-timeline" id="timeline-text-cells">
                             <!-- Populated dynamically with text bubbles -->
                         </div>
@@ -446,7 +461,7 @@
                 <div class="preview-modal-tabs">
                     <button class="preview-tab-btn active" id="tab-preview-orig">Original</button>
                     <button class="preview-tab-btn" id="tab-preview-cutout">AI Cutout</button>
-                    <button class="preview-tab-btn" id="tab-preview-crop">📐 Crop</button>
+                    <button class="preview-tab-btn" id="tab-preview-crop" style="display: inline-flex; align-items: center; gap: 4px;"><i data-lucide="crop" style="width: 12px; height: 12px;"></i>Crop</button>
                 </div>
                 <span class="preview-modal-counter" id="preview-modal-counter">1 / 5</span>
             </div>
@@ -460,18 +475,18 @@
                 <button class="preview-nav-btn next" id="btn-preview-next">❯</button>
             </div>
             <p class="preview-modal-caption" id="preview-modal-caption">Photo Caption</p>
-
+ 
             <!-- Editor Controls (Visible when AI Cutout tab is active) -->
             <div id="preview-modal-editor-controls" style="display: none; margin-top: 12px; flex-direction: column; gap: 8px; border-top: 1px solid var(--border-color); padding-top: 12px;">
                 <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">
-                    <span style="font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--accent);">✏️ Manual Cutout Editor</span>
+                    <span style="font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--accent); display: inline-flex; align-items: center; gap: 4px;"><i data-lucide="pencil" style="width: 12px; height: 12px;"></i>Manual Cutout Editor</span>
                     <span id="prev-brush-tool-indicator" style="font-size: 11px; color: var(--text-muted);">Mode: Brush (Reveal)</span>
                 </div>
                 <div class="control-row" style="grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 4px;">
-                    <button class="editor-tool-btn active" id="prev-tool-brush" style="font-size: 11px; padding: 6px;">🖌️ Brush</button>
-                    <button class="editor-tool-btn" id="prev-tool-eraser" style="font-size: 11px; padding: 6px;">🧽 Eraser</button>
-                    <button class="editor-tool-btn" id="prev-tool-magic" style="font-size: 11px; padding: 6px;">🪄 Auto</button>
-                    <button class="editor-tool-btn" id="prev-tool-clear" style="font-size: 11px; padding: 6px;">🗑️ Clear</button>
+                    <button class="editor-tool-btn active" id="prev-tool-brush" style="font-size: 11px; padding: 6px; display: inline-flex; align-items: center; justify-content: center; gap: 4px;"><i data-lucide="brush" style="width: 12px; height: 12px;"></i>Brush</button>
+                    <button class="editor-tool-btn" id="prev-tool-eraser" style="font-size: 11px; padding: 6px; display: inline-flex; align-items: center; justify-content: center; gap: 4px;"><i data-lucide="eraser" style="width: 12px; height: 12px;"></i>Eraser</button>
+                    <button class="editor-tool-btn" id="prev-tool-magic" style="font-size: 11px; padding: 6px; display: inline-flex; align-items: center; justify-content: center; gap: 4px;"><i data-lucide="wand-2" style="width: 12px; height: 12px;"></i>Auto</button>
+                    <button class="editor-tool-btn" id="prev-tool-clear" style="font-size: 11px; padding: 6px; display: inline-flex; align-items: center; justify-content: center; gap: 4px;"><i data-lucide="trash-2" style="width: 12px; height: 12px;"></i>Clear</button>
                 </div>
                 <div class="control-slider-group" style="margin-bottom: 0;">
                     <div class="slider-header" style="font-size: 11px; margin-bottom: 2px;">
@@ -480,11 +495,11 @@
                     <input type="range" id="prev-brush-size" min="5" max="100" value="30" class="custom-slider" style="height: 4px; padding: 0;">
                 </div>
             </div>
-
+ 
             <!-- Crop Controls (Visible when Crop tab is active) -->
             <div id="preview-modal-crop-controls" style="display: none; margin-top: 12px; flex-direction: column; gap: 8px; border-top: 1px solid var(--border-color); padding-top: 12px;">
                 <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">
-                    <span style="font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--accent);">📐 Crop Photo</span>
+                    <span style="font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--accent); display: inline-flex; align-items: center; gap: 4px;"><i data-lucide="crop" style="width: 12px; height: 12px;"></i>Crop Photo</span>
                     <button class="primary-btn" id="btn-prev-crop-apply" style="font-size: 11px; padding: 4px 10px; height: auto;">Apply Crop</button>
                 </div>
                 <div class="control-row" style="grid-template-columns: repeat(5, 1fr); gap: 4px; margin-bottom: 4px;">
@@ -500,12 +515,220 @@
                     </div>
                     <input type="range" id="crop-scale-slider" min="10" max="100" value="80" class="custom-slider" style="height: 4px; padding: 0;">
                 </div>
-                <p style="font-size: 10px; color: var(--text-muted); margin: 2px 0 0 0; text-align: center;">💡 Drag on the image to position the crop box. Use slider to scale.</p>
+                <p style="font-size: 10px; color: var(--text-muted); margin: 2px 0 0 0; text-align: center;">Drag on the image to position the crop box. Use slider to scale.</p>
             </div>
         </div>
     </div>
 
+    <!-- Thumbnail Designer Modal -->
+    <div class="preview-modal" id="thumbnail-modal" style="display: none;">
+        <div class="preview-modal-overlay" id="thumbnail-modal-overlay"></div>
+        <div class="preview-modal-content" style="max-width: 960px; width: 95%; max-height: 90vh; height: auto;">
+            <button class="preview-modal-close" id="thumbnail-modal-close">✕</button>
+            <div class="preview-modal-header" style="margin-bottom: 12px; border-bottom: 1px solid var(--border); padding-bottom: 8px;">
+                <h3 style="font-size: 15px; font-weight: 700; color: var(--text-hi); display: flex; align-items: center; gap: 8px;"><i data-lucide="palette" style="width:16px;height:16px;"></i> Cover Art & Thumbnail Designer</h3>
+            </div>
+            
+            <div class="thumbnail-modal-grid">
+                <!-- Left Column: Interactive Canvas Workspace -->
+                <div class="thumbnail-workspace">
+                    <div class="thumbnail-canvas-container" id="thumbnail-canvas-container">
+                        <canvas id="thumbnail-canvas"></canvas>
+                    </div>
+                    <div style="position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); font-size: 10px; color: var(--text-mid); background: rgba(255,255,255,0.85); padding: 4px 10px; border-radius: 20px; border: 1px solid var(--border); pointer-events: none; white-space: nowrap; display: flex; align-items: center; gap: 4px;">
+                        <i data-lucide="move" style="width:10px;height:10px;"></i> Drag cutouts or caption text directly on the canvas to design!
+                    </div>
+                </div>
+                
+                <!-- Right Column: Design controls -->
+                <div class="thumbnail-controls-panel">
+                    <!-- Mode selection -->
+                    <div class="thumbnail-section-card">
+                        <div class="thumbnail-section-title">Design Mode</div>
+                        <div class="segmented-control" style="display: flex; width: 100%;">
+                            <button type="button" id="btn-thumb-mode-auto" class="segment-btn active" style="flex: 1; padding: 6px;"><i data-lucide="zap" style="width:11px;height:11px;margin-right:3px;vertical-align:middle;"></i>Auto</button>
+                            <button type="button" id="btn-thumb-mode-manual" class="segment-btn" style="flex: 1; padding: 6px;"><i data-lucide="pencil-ruler" style="width:11px;height:11px;margin-right:3px;vertical-align:middle;"></i>Manual</button>
+                        </div>
+                        <div id="thumb-auto-generate-area" style="margin-top: 6px;">
+                            <button type="button" class="primary-btn wide-btn" id="btn-thumb-auto-generate" style="padding: 8px; font-size: 11px; display: flex; align-items: center; justify-content: center; gap: 5px;"><i data-lucide="sparkles" style="width:12px;height:12px;"></i>Auto-Collage Layout</button>
+                        </div>
+                    </div>
+
+                    <!-- Cutouts Selection (Available in both modes, controls which cutouts can be drawn) -->
+                    <div class="thumbnail-section-card">
+                        <div class="thumbnail-section-title">
+                            <span>Select Cutouts</span>
+                            <span style="font-size: 9px; font-weight: normal; color: var(--text-lo);" id="cutout-limit-indicator">Included: 0</span>
+                        </div>
+                        <p style="font-size: 10px; color: var(--text-mid); margin: -4px 0 6px 0;">Toggle cutouts to include in collage cover art.</p>
+                        <div class="cutout-selection-list" id="thumb-cutout-list">
+                            <!-- Populated dynamically via JS -->
+                        </div>
+                    </div>
+
+                    <!-- Manual controls (only visible/interactable in manual mode) -->
+                    <div class="thumbnail-section-card" id="thumb-manual-controls-card" style="opacity: 0.6; pointer-events: none; transition: opacity 0.2s;">
+                        <div class="thumbnail-section-title">Manual Transform</div>
+                        <div class="control-slider-group" style="margin-bottom: 8px;">
+                            <div class="slider-header" style="font-size: 10px; margin-bottom: 2px;">
+                                <span>Scale: <span id="thumb-active-scale-val">100%</span></span>
+                            </div>
+                            <input type="range" id="thumb-active-scale" min="20" max="200" value="100" class="custom-slider" style="height: 4px; padding: 0;">
+                        </div>
+                        <div class="control-slider-group" style="margin-bottom: 8px;">
+                            <div class="slider-header" style="font-size: 10px; margin-bottom: 2px;">
+                                <span>Rotation: <span id="thumb-active-rotation-val">0°</span></span>
+                            </div>
+                            <input type="range" id="thumb-active-rotation" min="-180" max="180" value="0" class="custom-slider" style="height: 4px; padding: 0;">
+                        </div>
+                        <div style="display: flex; gap: 8px; margin-top: 6px;">
+                            <button type="button" class="secondary-btn" id="btn-thumb-layer-down" style="flex: 1; font-size: 10px; padding: 5px;" title="Send active cutout backward">Layer Down</button>
+                            <button type="button" class="secondary-btn" id="btn-thumb-layer-up" style="flex: 1; font-size: 10px; padding: 5px;" title="Bring active cutout forward">Layer Up</button>
+                        </div>
+                        <p id="thumb-selection-hint" style="font-size: 9px; color: var(--accent); margin: 6px 0 0 0; text-align: center; font-weight: 500;"><i data-lucide="mouse-pointer-click" style="width:9px;height:9px;vertical-align:middle;"></i> Click any cutout or text on the canvas to select it.</p>
+                    </div>
+
+                    <!-- Background settings -->
+                    <div class="thumbnail-section-card">
+                        <div class="thumbnail-section-title">Background Style</div>
+                        <div class="control-slider-group" style="margin-bottom: 6px;">
+                            <select id="thumb-bg-type-select" class="custom-select" style="padding: 4px 8px; font-size: 11px; height: 26px;">
+                                <option value="gradient">Gradient Blend</option>
+                                <option value="solid">Solid Color</option>
+                                <option value="blur">Blurred Photo</option>
+                                <option value="transparent">Transparent</option>
+                            </select>
+                        </div>
+                        <div id="thumb-bg-color-pickers" style="display: flex; gap: 10px;">
+                            <div class="control-slider-group" id="thumb-bg-color-1-group" style="margin-bottom: 0; flex: 1;">
+                                <label style="font-size: 9px; margin-bottom: 2px;">Color 1:</label>
+                                <input type="color" id="thumb-bg-color-1" value="#ff4b8b" style="width: 100%; height: 24px; border: 1px solid var(--border-md); border-radius: var(--r-xs); cursor: pointer; padding: 0; background: none;">
+                            </div>
+                            <div class="control-slider-group" id="thumb-bg-color-2-group" style="margin-bottom: 0; flex: 1;">
+                                <label style="font-size: 9px; margin-bottom: 2px;">Color 2:</label>
+                                <input type="color" id="thumb-bg-color-2" value="#2b1055" style="width: 100%; height: 24px; border: 1px solid var(--border-md); border-radius: var(--r-xs); cursor: pointer; padding: 0; background: none;">
+                            </div>
+                        </div>
+                        <div class="control-slider-group" id="thumb-bg-blur-select-group" style="margin-bottom: 0; display: none;">
+                            <label style="font-size: 9px; margin-bottom: 2px;">Select Photo:</label>
+                            <select id="thumb-bg-blur-select" class="custom-select" style="padding: 4px 8px; font-size: 11px; height: 26px;"></select>
+                        </div>
+                    </div>
+
+                    <!-- Caption customizer -->
+                    <div class="thumbnail-section-card">
+                        <div class="thumbnail-section-title">Caption Overlay</div>
+                        <div class="control-slider-group" style="margin-bottom: 8px;">
+                            <input type="text" id="thumb-caption-input" class="custom-select" style="padding: 6px 10px; font-size: 11px; height: 30px;" placeholder="Add caption text...">
+                        </div>
+                        <div class="control-slider-group" style="margin-bottom: 8px;">
+                            <label style="font-size: 9px; margin-bottom: 4px; display: flex; align-items: center; gap: 4px;"><i data-lucide="type" style="width:9px;height:9px;"></i> Aesthetic Font:</label>
+                            <select id="thumb-font-select" class="custom-select" style="padding: 4px 8px; font-size: 11px; height: 28px;">
+                                <optgroup label="— Bold Impact —">
+                                    <option value="Dela Gothic One" selected>Dela Gothic One — Chunky Bold</option>
+                                    <option value="Anton">Anton — Heavy Impact</option>
+                                    <option value="Bebas Neue">Bebas Neue — All-Caps Cinematic</option>
+                                    <option value="Black Han Sans">Black Han Sans — Solid Korean Bold</option>
+                                    <option value="Changa One">Changa One — Condensed Italic</option>
+                                    <option value="Titan One">Titan One — Retro Rounded</option>
+                                    <option value="Lilita One">Lilita One — Fun Display</option>
+                                    <option value="Righteous">Righteous — Stylish Rounded</option>
+                                    <option value="Graduate">Graduate — Sports Collegiate</option>
+                                    <option value="Russo One">Russo One — Military Strong</option>
+                                </optgroup>
+                                <optgroup label="— Expressive —">
+                                    <option value="Bungee">Bungee — Retro Street Sign</option>
+                                    <option value="Syne">Syne — Trendy Wide Display</option>
+                                    <option value="Oswald">Oswald — News Headline</option>
+                                    <option value="Montserrat">Montserrat — Geometric Modern</option>
+                                    <option value="Poppins">Poppins — Clean Rounded</option>
+                                </optgroup>
+                                <optgroup label="— Elegant —">
+                                    <option value="Playfair Display">Playfair Display — Classic Serif</option>
+                                    <option value="Satisfy">Satisfy — Handwritten Cursive</option>
+                                    <option value="Outfit">Outfit — Clean Minimal</option>
+                                </optgroup>
+                            </select>
+                        </div>
+
+                        <!-- Color Preset Swatches -->
+                        <div class="control-slider-group" style="margin-bottom: 8px;">
+                            <label style="font-size: 9px; margin-bottom: 4px;">Color Preset:</label>
+                            <div id="thumb-color-presets" style="display: flex; flex-wrap: wrap; gap: 5px;">
+                                <button type="button" class="color-preset-btn active" data-preset="white" title="Clean White" style="background:#ffffff; color:#000; border: 2px solid #ccc;">White</button>
+                                <button type="button" class="color-preset-btn" data-preset="yellow" title="Highlight Yellow" style="background:#FFD700; color:#000;">Gold</button>
+                                <button type="button" class="color-preset-btn" data-preset="sunset" title="Sunset Gradient" style="background: linear-gradient(135deg,#FF6B35,#FFD700); color:#000;">Sunset</button>
+                                <button type="button" class="color-preset-btn" data-preset="candy" title="Cotton Candy" style="background: linear-gradient(135deg,#FF6EC7,#B9F2FF); color:#333;">Candy</button>
+                                <button type="button" class="color-preset-btn" data-preset="cyber" title="Cyberpunk" style="background: linear-gradient(135deg,#00FFFF,#FF00FF); color:#000;">Cyber</button>
+                                <button type="button" class="color-preset-btn" data-preset="gold" title="Gold Royalty" style="background: linear-gradient(135deg,#BF953F,#FCF6BA,#B38728); color:#333;">Royal</button>
+                                <button type="button" class="color-preset-btn" data-preset="neon" title="Neon Green" style="background:#39FF14; color:#000;">Neon</button>
+                                <button type="button" class="color-preset-btn" data-preset="fire" title="Fire Red" style="background: linear-gradient(135deg,#FF416C,#FF4B2B); color:#fff;">Fire</button>
+                            </div>
+                        </div>
+
+                        <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+                            <div class="control-slider-group" style="margin-bottom: 0; flex: 1;">
+                                <label style="font-size: 9px; margin-bottom: 2px;">Fill Color:</label>
+                                <input type="color" id="thumb-caption-color" value="#ffffff" style="width: 100%; height: 24px; border: 1px solid var(--border-md); border-radius: var(--r-xs); cursor: pointer; padding: 0; background: none;">
+                            </div>
+                            <div class="control-slider-group" style="margin-bottom: 0; flex: 1;">
+                                <label style="font-size: 9px; margin-bottom: 2px;">Grad. End:</label>
+                                <input type="color" id="thumb-caption-grad-end" value="#FFD700" style="width: 100%; height: 24px; border: 1px solid var(--border-md); border-radius: var(--r-xs); cursor: pointer; padding: 0; background: none;">
+                            </div>
+                            <div class="control-slider-group" style="margin-bottom: 0; flex: 1;">
+                                <label style="font-size: 9px; margin-bottom: 2px;">Stroke:</label>
+                                <input type="color" id="thumb-caption-stroke" value="#000000" style="width: 100%; height: 24px; border: 1px solid var(--border-md); border-radius: var(--r-xs); cursor: pointer; padding: 0; background: none;">
+                            </div>
+                        </div>
+
+                        <!-- Text Fill Type -->
+                        <div class="control-slider-group" style="margin-bottom: 8px;">
+                            <label style="font-size: 9px; margin-bottom: 4px;">Text Fill:</label>
+                            <div class="segmented-control" style="display: flex; width: 100%;">
+                                <button type="button" id="thumb-fill-solid" class="segment-btn active" style="flex: 1; padding: 4px; font-size: 10px;">Solid</button>
+                                <button type="button" id="thumb-fill-gradient" class="segment-btn" style="flex: 1; padding: 4px; font-size: 10px;">Gradient</button>
+                            </div>
+                        </div>
+
+                        <!-- Shadow Preset -->
+                        <div class="control-slider-group" style="margin-bottom: 8px;">
+                            <label style="font-size: 9px; margin-bottom: 4px;"><i data-lucide="sparkles" style="width:9px;height:9px;"></i> Shadow Style:</label>
+                            <select id="thumb-shadow-select" class="custom-select" style="padding: 4px 8px; font-size: 11px; height: 26px;">
+                                <option value="none">None</option>
+                                <option value="deep">Deep Black Drop</option>
+                                <option value="glow">Glowing Neon</option>
+                                <option value="retro3d" selected>Retro 3D Offset</option>
+                                <option value="soft">Soft Elegant</option>
+                            </select>
+                        </div>
+
+                        <div class="control-slider-group" style="margin-bottom: 6px;">
+                            <div class="slider-header" style="font-size: 10px; margin-bottom: 2px;">
+                                <span>Font Size: <span id="thumb-font-size-val">60px</span></span>
+                            </div>
+                            <input type="range" id="thumb-font-size" min="20" max="150" value="60" class="custom-slider" style="height: 4px; padding: 0;">
+                        </div>
+                        <div class="control-slider-group" style="margin-bottom: 0;">
+                            <div class="slider-header" style="font-size: 10px; margin-bottom: 2px;">
+                                <span>Outline Width: <span id="thumb-stroke-width-val">6px</span></span>
+                            </div>
+                            <input type="range" id="thumb-stroke-width" min="0" max="20" value="6" class="custom-slider" style="height: 4px; padding: 0;">
+                        </div>
+                    </div>
+
+                    <!-- Save / Export Actions -->
+                    <div style="display: flex; gap: 10px; margin-top: auto; padding-top: 10px; border-top: 1px solid var(--border);">
+                        <button type="button" class="secondary-btn" id="btn-thumb-download" style="flex: 1; font-size: 11px; padding: 8px; display: flex; align-items: center; justify-content: center; gap: 4px;"><i data-lucide="download" style="width:12px;height:12px;"></i> Download PNG</button>
+                        <button type="button" class="primary-btn" id="btn-thumb-save" style="flex: 1; font-size: 11px; padding: 8px; display: flex; align-items: center; justify-content: center; gap: 4px;"><i data-lucide="check" style="width:12px;height:12px;"></i> Save & Apply</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lucide Icon Library -->
+    <script src="https://unpkg.com/lucide@latest"></script>
     <!-- JavaScript Files (ES Module structure) -->
-    <script type="module" src="app.js?v=17"></script>
+    <script type="module" src="app.js?v=19"></script>
 </body>
 </html>
