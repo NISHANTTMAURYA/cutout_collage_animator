@@ -68,6 +68,14 @@ const state = {
 
     // Timing Settings
     cutoutHoldRatio: 0.35,
+    videoFadeIn: true,
+    videoFadeOut: true,
+    audioFadeIn: true,
+    audioFadeOut: true,
+    videoFadeInDur: 1.0,
+    videoFadeOutDur: 1.0,
+    audioFadeInDur: 1.0,
+    audioFadeOutDur: 1.5,
 
     // Custom Audio Settings
     customAudioStart: 0.0,
@@ -658,6 +666,14 @@ async function saveProjectSettingsOnly() {
                 speedMode: state.speedMode,
                 videoRatio: state.videoRatio,
                 captionFont: state.captionFont,
+                videoFadeIn: state.videoFadeIn,
+                videoFadeOut: state.videoFadeOut,
+                audioFadeIn: state.audioFadeIn,
+                audioFadeOut: state.audioFadeOut,
+                videoFadeInDur: state.videoFadeInDur,
+                videoFadeOutDur: state.videoFadeOutDur,
+                audioFadeInDur: state.audioFadeInDur,
+                audioFadeOutDur: state.audioFadeOutDur,
                 thumbnailMode: state.thumbnailMode,
                 thumbnailCaption: state.thumbnailCaption,
                 thumbnailFont: state.thumbnailFont,
@@ -713,6 +729,14 @@ async function saveCurrentProjectToDb() {
                 speedMode: state.speedMode,
                 videoRatio: state.videoRatio,
                 captionFont: state.captionFont,
+                videoFadeIn: state.videoFadeIn,
+                videoFadeOut: state.videoFadeOut,
+                audioFadeIn: state.audioFadeIn,
+                audioFadeOut: state.audioFadeOut,
+                videoFadeInDur: state.videoFadeInDur,
+                videoFadeOutDur: state.videoFadeOutDur,
+                audioFadeInDur: state.audioFadeInDur,
+                audioFadeOutDur: state.audioFadeOutDur,
                 thumbnailMode: state.thumbnailMode,
                 thumbnailCaption: state.thumbnailCaption,
                 thumbnailFont: state.thumbnailFont,
@@ -753,7 +777,8 @@ async function saveCurrentProjectToDb() {
                 imgBlob,
                 maskBlob,
                 text: slide.text,
-                rotation: slide.rotation
+                rotation: slide.rotation,
+                duration: slide.duration || null
             });
         }
 
@@ -798,6 +823,70 @@ async function loadProject(projectId) {
         state.speedMode = project.settings.speedMode || 'manual';
         state.videoRatio = project.settings.videoRatio || '9-16';
         state.captionFont = project.settings.captionFont || 'playfair';
+        state.videoFadeIn = project.settings.videoFadeIn !== false;
+        state.videoFadeOut = project.settings.videoFadeOut !== false;
+        state.audioFadeIn = project.settings.audioFadeIn !== false;
+        state.audioFadeOut = project.settings.audioFadeOut !== false;
+        state.videoFadeInDur = project.settings.videoFadeInDur !== undefined ? project.settings.videoFadeInDur : 1.0;
+        state.videoFadeOutDur = project.settings.videoFadeOutDur !== undefined ? project.settings.videoFadeOutDur : 1.0;
+        state.audioFadeInDur = project.settings.audioFadeInDur !== undefined ? project.settings.audioFadeInDur : 1.0;
+        state.audioFadeOutDur = project.settings.audioFadeOutDur !== undefined ? project.settings.audioFadeOutDur : 1.5;
+
+        if (renderer) {
+            renderer.videoFadeIn = state.videoFadeIn;
+            renderer.videoFadeOut = state.videoFadeOut;
+            renderer.videoFadeInDur = state.videoFadeInDur;
+            renderer.videoFadeOutDur = state.videoFadeOutDur;
+        }
+        audio.audioFadeIn = state.audioFadeIn;
+        audio.audioFadeOut = state.audioFadeOut;
+        audio.audioFadeInDur = state.audioFadeInDur;
+        audio.audioFadeOutDur = state.audioFadeOutDur;
+
+        const videoFadeInCheck = document.getElementById('video-fade-in');
+        const videoFadeOutCheck = document.getElementById('video-fade-out');
+        const audioFadeInCheck = document.getElementById('audio-fade-in');
+        const audioFadeOutCheck = document.getElementById('audio-fade-out');
+
+        const videoFadeInDurInput = document.getElementById('video-fade-in-dur');
+        const videoFadeOutDurInput = document.getElementById('video-fade-out-dur');
+        const audioFadeInDurInput = document.getElementById('audio-fade-in-dur');
+        const audioFadeOutDurInput = document.getElementById('audio-fade-out-dur');
+
+        const videoFadeInDurVal = document.getElementById('video-fade-in-dur-val');
+        const videoFadeOutDurVal = document.getElementById('video-fade-out-dur-val');
+        const audioFadeInDurVal = document.getElementById('audio-fade-in-dur-val');
+        const audioFadeOutDurVal = document.getElementById('audio-fade-out-dur-val');
+
+        const videoFadeInContainer = document.getElementById('video-fade-in-dur-container');
+        const videoFadeOutContainer = document.getElementById('video-fade-out-dur-container');
+        const audioFadeInContainer = document.getElementById('audio-fade-in-dur-container');
+        const audioFadeOutContainer = document.getElementById('audio-fade-out-dur-container');
+
+        if (videoFadeInCheck) videoFadeInCheck.checked = state.videoFadeIn;
+        if (videoFadeOutCheck) videoFadeOutCheck.checked = state.videoFadeOut;
+        if (audioFadeInCheck) audioFadeInCheck.checked = state.audioFadeIn;
+        if (audioFadeOutCheck) audioFadeOutCheck.checked = state.audioFadeOut;
+
+        if (videoFadeInDurInput) videoFadeInDurInput.value = state.videoFadeInDur;
+        if (videoFadeOutDurInput) videoFadeOutDurInput.value = state.videoFadeOutDur;
+        if (audioFadeInDurInput) audioFadeInDurInput.value = state.audioFadeInDur;
+        if (audioFadeOutDurInput) audioFadeOutDurInput.value = state.audioFadeOutDur;
+
+        if (videoFadeInDurVal) videoFadeInDurVal.textContent = state.videoFadeInDur.toFixed(1) + 's';
+        if (videoFadeOutDurVal) videoFadeOutDurVal.textContent = state.videoFadeOutDur.toFixed(1) + 's';
+        if (audioFadeInDurVal) audioFadeInDurVal.textContent = state.audioFadeInDur.toFixed(1) + 's';
+        if (audioFadeOutDurVal) audioFadeOutDurVal.textContent = state.audioFadeOutDur.toFixed(1) + 's';
+
+        if (videoFadeInDurInput) videoFadeInDurInput.disabled = !state.videoFadeIn;
+        if (videoFadeOutDurInput) videoFadeOutDurInput.disabled = !state.videoFadeOut;
+        if (audioFadeInDurInput) audioFadeInDurInput.disabled = !state.audioFadeIn;
+        if (audioFadeOutDurInput) audioFadeOutDurInput.disabled = !state.audioFadeOut;
+
+        if (videoFadeInContainer) videoFadeInContainer.style.opacity = state.videoFadeIn ? '1' : '0.4';
+        if (videoFadeOutContainer) videoFadeOutContainer.style.opacity = state.videoFadeOut ? '1' : '0.4';
+        if (audioFadeInContainer) audioFadeInContainer.style.opacity = state.audioFadeIn ? '1' : '0.4';
+        if (audioFadeOutContainer) audioFadeOutContainer.style.opacity = state.audioFadeOut ? '1' : '0.4';
 
         // Restore GPT Poster designer settings
         state.gptPosterCaption = project.settings.gptPosterCaption || '';
@@ -1829,6 +1918,103 @@ function setupEventListeners() {
         renderer.beatSync = state.beatSync;
         triggerAutosave();
     });
+
+    // Fade Toggles and Duration Sliders
+    const videoFadeInCheck = document.getElementById('video-fade-in');
+    const videoFadeOutCheck = document.getElementById('video-fade-out');
+    const audioFadeInCheck = document.getElementById('audio-fade-in');
+    const audioFadeOutCheck = document.getElementById('audio-fade-out');
+
+    const videoFadeInDurInput = document.getElementById('video-fade-in-dur');
+    const videoFadeOutDurInput = document.getElementById('video-fade-out-dur');
+    const audioFadeInDurInput = document.getElementById('audio-fade-in-dur');
+    const audioFadeOutDurInput = document.getElementById('audio-fade-out-dur');
+
+    const videoFadeInDurVal = document.getElementById('video-fade-in-dur-val');
+    const videoFadeOutDurVal = document.getElementById('video-fade-out-dur-val');
+    const audioFadeInDurVal = document.getElementById('audio-fade-in-dur-val');
+    const audioFadeOutDurVal = document.getElementById('audio-fade-out-dur-val');
+
+    const videoFadeInContainer = document.getElementById('video-fade-in-dur-container');
+    const videoFadeOutContainer = document.getElementById('video-fade-out-dur-container');
+    const audioFadeInContainer = document.getElementById('audio-fade-in-dur-container');
+    const audioFadeOutContainer = document.getElementById('audio-fade-out-dur-container');
+
+    if (videoFadeInCheck) {
+        videoFadeInCheck.addEventListener('change', (e) => {
+            state.videoFadeIn = e.target.checked;
+            if (renderer) renderer.videoFadeIn = e.target.checked;
+            if (videoFadeInDurInput) videoFadeInDurInput.disabled = !state.videoFadeIn;
+            if (videoFadeInContainer) videoFadeInContainer.style.opacity = state.videoFadeIn ? '1' : '0.4';
+            saveProjectSettingsOnly();
+            if (renderer) renderer.draw(state.playTime);
+        });
+    }
+    if (videoFadeInDurInput) {
+        videoFadeInDurInput.addEventListener('input', (e) => {
+            state.videoFadeInDur = parseFloat(e.target.value);
+            if (renderer) renderer.videoFadeInDur = state.videoFadeInDur;
+            if (videoFadeInDurVal) videoFadeInDurVal.textContent = state.videoFadeInDur.toFixed(1) + 's';
+            saveProjectSettingsOnly();
+            if (renderer) renderer.draw(state.playTime);
+        });
+    }
+
+    if (videoFadeOutCheck) {
+        videoFadeOutCheck.addEventListener('change', (e) => {
+            state.videoFadeOut = e.target.checked;
+            if (renderer) renderer.videoFadeOut = e.target.checked;
+            if (videoFadeOutDurInput) videoFadeOutDurInput.disabled = !state.videoFadeOut;
+            if (videoFadeOutContainer) videoFadeOutContainer.style.opacity = state.videoFadeOut ? '1' : '0.4';
+            saveProjectSettingsOnly();
+            if (renderer) renderer.draw(state.playTime);
+        });
+    }
+    if (videoFadeOutDurInput) {
+        videoFadeOutDurInput.addEventListener('input', (e) => {
+            state.videoFadeOutDur = parseFloat(e.target.value);
+            if (renderer) renderer.videoFadeOutDur = state.videoFadeOutDur;
+            if (videoFadeOutDurVal) videoFadeOutDurVal.textContent = state.videoFadeOutDur.toFixed(1) + 's';
+            saveProjectSettingsOnly();
+            if (renderer) renderer.draw(state.playTime);
+        });
+    }
+
+    if (audioFadeInCheck) {
+        audioFadeInCheck.addEventListener('change', (e) => {
+            state.audioFadeIn = e.target.checked;
+            audio.audioFadeIn = e.target.checked;
+            if (audioFadeInDurInput) audioFadeInDurInput.disabled = !state.audioFadeIn;
+            if (audioFadeInContainer) audioFadeInContainer.style.opacity = state.audioFadeIn ? '1' : '0.4';
+            saveProjectSettingsOnly();
+        });
+    }
+    if (audioFadeInDurInput) {
+        audioFadeInDurInput.addEventListener('input', (e) => {
+            state.audioFadeInDur = parseFloat(e.target.value);
+            audio.audioFadeInDur = state.audioFadeInDur;
+            if (audioFadeInDurVal) audioFadeInDurVal.textContent = state.audioFadeInDur.toFixed(1) + 's';
+            saveProjectSettingsOnly();
+        });
+    }
+
+    if (audioFadeOutCheck) {
+        audioFadeOutCheck.addEventListener('change', (e) => {
+            state.audioFadeOut = e.target.checked;
+            audio.audioFadeOut = e.target.checked;
+            if (audioFadeOutDurInput) audioFadeOutDurInput.disabled = !state.audioFadeOut;
+            if (audioFadeOutContainer) audioFadeOutContainer.style.opacity = state.audioFadeOut ? '1' : '0.4';
+            saveProjectSettingsOnly();
+        });
+    }
+    if (audioFadeOutDurInput) {
+        audioFadeOutDurInput.addEventListener('input', (e) => {
+            state.audioFadeOutDur = parseFloat(e.target.value);
+            audio.audioFadeOutDur = state.audioFadeOutDur;
+            if (audioFadeOutDurVal) audioFadeOutDurVal.textContent = state.audioFadeOutDur.toFixed(1) + 's';
+            saveProjectSettingsOnly();
+        });
+    }
 
     // Settings
     DOM.slideDurationSlider.addEventListener('input', (e) => {
@@ -3339,6 +3525,9 @@ function animationTick(timestamp) {
                 state.playTime = 0;
             }
             
+            // Apply volume fade if enabled
+            audio.updateFade(state.playTime, totalDuration);
+            
             // Sync HUD Timeline values
             updateHudTimeline(totalDuration);
         }
@@ -3468,6 +3657,10 @@ async function startExportingVideo() {
     recordRenderer.bgPalette = state.bgPalette;
     recordRenderer.slideDuration = state.slideDuration;
     recordRenderer.beatSync = state.beatSync;
+    recordRenderer.videoFadeIn = state.videoFadeIn;
+    recordRenderer.videoFadeOut = state.videoFadeOut;
+    recordRenderer.videoFadeInDur = state.videoFadeInDur;
+    recordRenderer.videoFadeOutDur = state.videoFadeOutDur;
     recordRenderer.setSlides(state.slides);
     
     // 2. Hook up MediaRecorder streams
@@ -3480,6 +3673,10 @@ async function startExportingVideo() {
     if (state.musicTheme !== 'none') {
         // Start synthetic audio context BEFORE grabbing track
         audio.setTheme(state.musicTheme);
+        audio.audioFadeIn = state.audioFadeIn;
+        audio.audioFadeOut = state.audioFadeOut;
+        audio.audioFadeInDur = state.audioFadeInDur;
+        audio.audioFadeOutDur = state.audioFadeOutDur;
         audio.start((time) => {
             recordRenderer.triggerBeatPulse();
         });
@@ -3772,6 +3969,8 @@ async function startExportingVideo() {
             // Advance renderer in sync with real time
             recordRenderer.update(dt);
             recordRenderer.draw(t);
+            // Apply volume fade dynamically during export
+            audio.updateFade(t, totalDuration);
         } catch (err) {
             console.error('[export] Frame render error at t=' + t.toFixed(3) + 's:', err);
             // Show error and abort

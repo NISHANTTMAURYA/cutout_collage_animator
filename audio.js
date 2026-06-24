@@ -39,6 +39,12 @@ export class AudioEngine {
         // Beat Sync metrics
         this.lastBeatTime = 0;
         this.beatDuration = 0;
+
+        // Audio Fade settings
+        this.audioFadeIn = true;
+        this.audioFadeOut = true;
+        this.audioFadeInDur = 1.0;
+        this.audioFadeOutDur = 1.5;
     }
 
     init() {
@@ -218,6 +224,23 @@ export class AudioEngine {
         } else {
             console.log("[AudioEngine] Volume stored as (no masterGain yet):", volume);
         }
+    }
+
+    updateFade(playTime, totalDuration) {
+        if (!this.isPlaying || !this.masterGain || !this.ctx) return;
+        
+        let multiplier = 1.0;
+        const fadeInDur = this.audioFadeInDur ?? 1.0;
+        const fadeOutDur = this.audioFadeOutDur ?? 1.5;
+        
+        if (this.audioFadeIn && playTime < fadeInDur) {
+            multiplier = Math.max(0, playTime / fadeInDur);
+        } else if (this.audioFadeOut && playTime > totalDuration - fadeOutDur) {
+            multiplier = Math.max(0, (totalDuration - playTime) / fadeOutDur);
+        }
+        
+        const targetVol = this.volume * multiplier;
+        this.masterGain.gain.setValueAtTime(targetVol, this.ctx.currentTime);
     }
 
     getAudioStream() {

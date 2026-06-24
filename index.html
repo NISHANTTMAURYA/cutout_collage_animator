@@ -247,7 +247,57 @@
                                         </div>
                                     </div>
 
-                                    <div class="control-slider-group">
+                                     <div class="control-slider-group">
+                                         <label>Video & Audio Fades:</label>
+                                         <div class="fade-options-list" style="display: flex; flex-direction: column; gap: 8px; margin-top: 6px; background: var(--panel-inner); border: 1px solid var(--border-md); border-radius: 6px; padding: 10px;">
+                                             <!-- Row 1: Video Fade In -->
+                                             <div class="fade-option-row" style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                                                 <label class="checkbox-container" style="display: flex; align-items: center; gap: 6px; font-size: 11px; cursor: pointer; color: var(--text-mid); user-select: none; flex-shrink: 0; margin-bottom: 0;">
+                                                     <input type="checkbox" id="video-fade-in" checked style="accent-color: var(--accent); cursor: pointer;">
+                                                     Video Fade In
+                                                 </label>
+                                                 <div class="fade-duration-control" id="video-fade-in-dur-container" style="display: flex; align-items: center; gap: 6px; flex-grow: 1; justify-content: flex-end;">
+                                                     <input type="range" id="video-fade-in-dur" min="0.1" max="4.0" step="0.1" value="1.0" class="custom-slider" style="width: 70px; height: 4px; margin: 0; cursor: pointer;">
+                                                     <span id="video-fade-in-dur-val" style="font-size: 10px; color: var(--text-muted); width: 26px; text-align: right;">1.0s</span>
+                                                 </div>
+                                             </div>
+                                             <!-- Row 2: Video Fade Out -->
+                                             <div class="fade-option-row" style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                                                 <label class="checkbox-container" style="display: flex; align-items: center; gap: 6px; font-size: 11px; cursor: pointer; color: var(--text-mid); user-select: none; flex-shrink: 0; margin-bottom: 0;">
+                                                     <input type="checkbox" id="video-fade-out" checked style="accent-color: var(--accent); cursor: pointer;">
+                                                     Video Fade Out
+                                                 </label>
+                                                 <div class="fade-duration-control" id="video-fade-out-dur-container" style="display: flex; align-items: center; gap: 6px; flex-grow: 1; justify-content: flex-end;">
+                                                     <input type="range" id="video-fade-out-dur" min="0.1" max="4.0" step="0.1" value="1.0" class="custom-slider" style="width: 70px; height: 4px; margin: 0; cursor: pointer;">
+                                                     <span id="video-fade-out-dur-val" style="font-size: 10px; color: var(--text-muted); width: 26px; text-align: right;">1.0s</span>
+                                                 </div>
+                                             </div>
+                                             <!-- Row 3: Audio Fade In -->
+                                             <div class="fade-option-row" style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                                                 <label class="checkbox-container" style="display: flex; align-items: center; gap: 6px; font-size: 11px; cursor: pointer; color: var(--text-mid); user-select: none; flex-shrink: 0; margin-bottom: 0;">
+                                                     <input type="checkbox" id="audio-fade-in" checked style="accent-color: var(--accent); cursor: pointer;">
+                                                     Audio Fade In
+                                                 </label>
+                                                 <div class="fade-duration-control" id="audio-fade-in-dur-container" style="display: flex; align-items: center; gap: 6px; flex-grow: 1; justify-content: flex-end;">
+                                                     <input type="range" id="audio-fade-in-dur" min="0.1" max="4.0" step="0.1" value="1.0" class="custom-slider" style="width: 70px; height: 4px; margin: 0; cursor: pointer;">
+                                                     <span id="audio-fade-in-dur-val" style="font-size: 10px; color: var(--text-muted); width: 26px; text-align: right;">1.0s</span>
+                                                 </div>
+                                             </div>
+                                             <!-- Row 4: Audio Fade Out -->
+                                             <div class="fade-option-row" style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                                                 <label class="checkbox-container" style="display: flex; align-items: center; gap: 6px; font-size: 11px; cursor: pointer; color: var(--text-mid); user-select: none; flex-shrink: 0; margin-bottom: 0;">
+                                                     <input type="checkbox" id="audio-fade-out" checked style="accent-color: var(--accent); cursor: pointer;">
+                                                     Audio Fade Out
+                                                 </label>
+                                                 <div class="fade-duration-control" id="audio-fade-out-dur-container" style="display: flex; align-items: center; gap: 6px; flex-grow: 1; justify-content: flex-end;">
+                                                     <input type="range" id="audio-fade-out-dur" min="0.1" max="4.0" step="0.1" value="1.5" class="custom-slider" style="width: 70px; height: 4px; margin: 0; cursor: pointer;">
+                                                     <span id="audio-fade-out-dur-val" style="font-size: 10px; color: var(--text-muted); width: 26px; text-align: right;">1.5s</span>
+                                                 </div>
+                                             </div>
+                                         </div>
+                                     </div>
+
+                                     <div class="control-slider-group">
                                         <label for="video-aspect-ratio">Video Aspect Ratio:</label>
                                         <select id="video-aspect-ratio" class="custom-select">
                                             <option value="9-16" selected>Vertical / Reels (9:16)</option>

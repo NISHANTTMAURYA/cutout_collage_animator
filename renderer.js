@@ -17,6 +17,12 @@ export class CollageRenderer {
         this.cutoutHoldRatio = 0.35; // default 35% of slide duration
         this.beatSync = true;
         
+        // Video Fade settings
+        this.videoFadeIn = true;
+        this.videoFadeOut = true;
+        this.videoFadeInDur = 1.0;
+        this.videoFadeOutDur = 1.0;
+        
         // Beat trigger pulse (decays over time)
         this.beatPulse = 0.0;
         
@@ -222,7 +228,7 @@ export class CollageRenderer {
 
         const info = this.getSlideAtTime(t);
         if (!info) return;
-        const { slide, prevSlide, slideIdx, localTime, slideDur } = info;
+        const { slide, prevSlide, slideIdx, localTime, slideDur, totalDuration } = info;
 
         // Guard: skip draw if slide image not ready
         if (!slide || !slide.img) return;
@@ -230,6 +236,27 @@ export class CollageRenderer {
         this.ctx.save();
         this.drawCleanSlide(slide, prevSlide, localTime, slideIdx, t, slideDur);
         this.ctx.restore();
+
+        // --- Video Fade In / Fade Out Overlay ---
+        let fadeAlpha = 0.0;
+        const fadeInDur = this.videoFadeInDur ?? 1.0;
+        const fadeOutDur = this.videoFadeOutDur ?? 1.0;
+        
+        if (this.videoFadeIn && t < fadeInDur) {
+            fadeAlpha = 1.0 - (t / fadeInDur);
+        } else if (this.videoFadeOut && t > totalDuration - fadeOutDur) {
+            fadeAlpha = (t - (totalDuration - fadeOutDur)) / fadeOutDur;
+        }
+        
+        if (fadeAlpha > 0.0) {
+            const w = this.canvas.width;
+            const h = this.canvas.height;
+            this.ctx.save();
+            this.ctx.fillStyle = '#000000';
+            this.ctx.globalAlpha = Math.max(0, Math.min(1, fadeAlpha));
+            this.ctx.fillRect(0, 0, w, h);
+            this.ctx.restore();
+        }
     }
 
     drawThumbnail() {

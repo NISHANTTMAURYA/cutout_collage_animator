@@ -65,42 +65,21 @@ class CustomHandler(SimpleHTTPRequestHandler):
             temp_out_path = temp_in_path + '_converted.mp4'
             
             try:
-                # Run ffmpeg to convert to a standard, linearized H.264/AAC MP4
-                # If cover art exists, embed it as the cover art stream (attached_pic)
+                # Run ffmpeg to convert to a standard, linearized H.264/AAC MP4.
+                # Always output a single H.264 video stream and single AAC audio stream.
+                # Embedding a second stream (attached_pic PNG cover) is rejected as corrupted/unusual on WhatsApp.
                 cmd = [
                     'ffmpeg', '-y',
                     '-i', temp_in_path,
-                ]
-                
-                if thumbnail_path and os.path.exists(thumbnail_path):
-                    cmd.extend(['-i', thumbnail_path])
-                    cmd.extend([
-                        '-map', '0:v',
-                        '-map', '0:a?',
-                        '-map', '1:v',
-                        '-c:v:0', 'libx264',
-                        '-profile:v', 'main',
-                        '-level:v', '4.0',
-                        '-pix_fmt', 'yuv420p',
-                        '-c:a', 'aac',
-                        '-b:a', '192k',
-                        '-c:v:1', 'png',
-                        '-disposition:v:1', 'attached_pic',
-                    ])
-                else:
-                    cmd.extend([
-                        '-c:v', 'libx264',
-                        '-profile:v', 'main',
-                        '-level:v', '4.0',
-                        '-pix_fmt', 'yuv420p',
-                        '-c:a', 'aac',
-                        '-b:a', '192k',
-                    ])
-                    
-                cmd.extend([
+                    '-c:v', 'libx264',
+                    '-profile:v', 'main',
+                    '-level:v', '4.0',
+                    '-pix_fmt', 'yuv420p',
+                    '-c:a', 'aac',
+                    '-b:a', '192k',
                     '-movflags', '+faststart',
                     temp_out_path
-                ])
+                ]
                 
                 print(f"[Server] Running ffmpeg: {' '.join(cmd)}")
                 result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
