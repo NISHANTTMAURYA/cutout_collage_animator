@@ -989,6 +989,83 @@ input, textarea, [contenteditable="true"], .caption-input {
   color: var(--text-mid);
   font-family: 'Space Grotesk', sans-serif;
 }
+/* Set All toolbar */
+.set-all-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  background: var(--panel-bg);
+  border: 1.5px solid var(--border-md);
+  border-radius: var(--r-sm);
+  padding: 6px 10px;
+}
+.set-all-label {
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-right: 2px;
+}
+.set-all-presets {
+  display: flex;
+  gap: 4px;
+}
+.set-all-custom {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: auto;
+}
+.set-all-custom input[type="number"] {
+  width: 44px;
+  background: var(--panel-inner);
+  border: 1px solid var(--border-md);
+  border-radius: 5px;
+  color: var(--text-hi);
+  font-size: 11px;
+  padding: 2px 4px;
+  text-align: center;
+  -moz-appearance: textfield;
+}
+.set-all-custom input[type="number"]::-webkit-inner-spin-button,
+.set-all-custom input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; }
+.set-all-btn {
+  background: var(--panel-inner);
+  border: 1.5px solid var(--border-md);
+  border-radius: 5px;
+  color: var(--text-mid);
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 3px 8px;
+  cursor: pointer;
+  transition: background 0.14s, color 0.14s, border-color 0.14s;
+  white-space: nowrap;
+}
+.set-all-btn:hover {
+  background: var(--accent-subtle);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.set-all-apply {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.set-all-apply:hover {
+  filter: brightness(1.1);
+  background: var(--accent);
+  color: #fff;
+}
+.set-all-reset {
+  color: var(--text-muted);
+}
+.set-all-reset:hover {
+  background: rgba(255,80,80,0.12);
+  border-color: #f55;
+  color: #f55;
+}
 .captions-list {
   display: flex;
   flex-direction: column;
@@ -996,6 +1073,7 @@ input, textarea, [contenteditable="true"], .caption-input {
   max-height: 180px;
   overflow-y: auto;
 }
+
 .caption-editor-item {
   background: var(--panel-inner);
   border: 1.5px solid var(--border);

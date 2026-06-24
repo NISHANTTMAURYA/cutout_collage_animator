@@ -321,7 +321,25 @@
                                     </div>
 
                                     <div class="text-captions-section">
-                                        <h4>Customize Captions</h4>
+                                        <h4>Customize Captions &amp; Timing</h4>
+
+                                        <!-- Set All Toolbar -->
+                                        <div class="set-all-toolbar" id="set-all-toolbar">
+                                            <span class="set-all-label">Set All</span>
+                                            <div class="set-all-presets">
+                                                <button class="set-all-btn" id="set-all-half-beat" title="½ beat each">½ beat</button>
+                                                <button class="set-all-btn" id="set-all-1-beat"  title="1 beat each">1 beat</button>
+                                                <button class="set-all-btn" id="set-all-2-beat"  title="2 beats each">2 beats</button>
+                                                <button class="set-all-btn" id="set-all-4-beat"  title="4 beats each">4 beats</button>
+                                            </div>
+                                            <div class="set-all-custom">
+                                                <input type="number" id="set-all-custom-val" min="0.1" max="30" step="0.1" value="1.5" placeholder="sec">
+                                                <span class="cai-unit">s</span>
+                                                <button class="set-all-btn set-all-apply" id="set-all-apply">Apply</button>
+                                            </div>
+                                            <button class="set-all-btn set-all-reset" id="set-all-reset" title="Reset all to global duration">Reset</button>
+                                        </div>
+
                                         <div id="captions-container" class="captions-list"></div>
                                     </div>
                                 </div>

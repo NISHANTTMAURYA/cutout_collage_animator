@@ -1538,7 +1538,50 @@ function generateCaptionsEditor() {
 
 // Event Listeners Setup
 function setupEventListeners() {
-    
+
+    // ── "Set All" duration toolbar ────────────────────────────────────────────
+    function applyAllDurations(dur) {
+        const clamped = Math.max(0.1, Math.min(30, parseFloat(dur) || state.slideDuration));
+        state.slides.forEach(s => { s.duration = parseFloat(clamped.toFixed(2)); });
+        if (renderer) renderer.setSlides(state.slides);
+        generateCaptionsEditor();     // rebuild cards with new values
+        updateTimelineDisplay();
+        autoTrimCustomAudio();
+        triggerAutosave();
+        showToast(`⚡ All slides set to ${clamped.toFixed(2)}s`);
+    }
+
+    const setBeatBtn = (id, beats) => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('click', () => {
+            const bpm = audio.bpm || 90;
+            applyAllDurations((60 / bpm) * beats);
+        });
+    };
+    setBeatBtn('set-all-half-beat', 0.5);
+    setBeatBtn('set-all-1-beat',    1);
+    setBeatBtn('set-all-2-beat',    2);
+    setBeatBtn('set-all-4-beat',    4);
+
+    const applyBtn = document.getElementById('set-all-apply');
+    if (applyBtn) applyBtn.addEventListener('click', () => {
+        const val = document.getElementById('set-all-custom-val')?.value;
+        applyAllDurations(val);
+    });
+
+    const resetBtn = document.getElementById('set-all-reset');
+    if (resetBtn) resetBtn.addEventListener('click', () => {
+        state.slides.forEach(s => { delete s.duration; });
+        if (renderer) renderer.setSlides(state.slides);
+        generateCaptionsEditor();
+        updateTimelineDisplay();
+        autoTrimCustomAudio();
+        triggerAutosave();
+        showToast('↩️ Slide durations reset to global');
+    });
+    // ─────────────────────────────────────────────────────────────────────────
+
+
     // Project Select dropdown change
     DOM.projectSelect.addEventListener('change', async (e) => {
         state.activeProjectId = e.target.value;
