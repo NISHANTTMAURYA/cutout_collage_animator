@@ -1,6 +1,6 @@
-import { detectSubject, smoothMask, setModelStatusCallback, loadModel } from './saliency.js?v=7';
-import { AudioEngine } from './audio.js?v=7';
-import { CollageRenderer } from './renderer.js?v=7';
+import { detectSubject, smoothMask, setModelStatusCallback, loadModel } from './saliency.js?v=8';
+import { AudioEngine } from './audio.js?v=8';
+import { CollageRenderer } from './renderer.js?v=8';
 import {
     openDb,
     getProjects,
@@ -9,7 +9,7 @@ import {
     deleteProject,
     getSlides,
     saveSlides
-} from './db.js?v=7';
+} from './db.js?v=8';
 
 // Application State
 const state = {
