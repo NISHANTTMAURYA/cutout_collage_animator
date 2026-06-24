@@ -104,6 +104,37 @@ const state = {
 const audio = new AudioEngine();
 let renderer = null;
 
+// ─── Per-slide timing helpers ────────────────────────────────────────────────
+// Each slide can have slide.duration (seconds). Falls back to state.slideDuration.
+
+function getSlideDuration(slide) {
+    return (slide && slide.duration) ? slide.duration : state.slideDuration;
+}
+
+function getVideoTotalDuration() {
+    if (state.slides.length === 0) return 0;
+    return state.slides.reduce((sum, s) => sum + getSlideDuration(s), 0);
+}
+
+function getSlideStartTime(idx) {
+    let t = 0;
+    for (let i = 0; i < idx && i < state.slides.length; i++) {
+        t += getSlideDuration(state.slides[i]);
+    }
+    return t;
+}
+
+function getSlideIndexAtTime(t) {
+    let accumulated = 0;
+    for (let i = 0; i < state.slides.length; i++) {
+        accumulated += getSlideDuration(state.slides[i]);
+        if (t < accumulated) return i;
+    }
+    return state.slides.length - 1;
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
+
 // HTML Elements
 const DOM = {
     // Nav steps
@@ -857,7 +888,8 @@ async function loadProject(projectId) {
                 mask: mask,
                 cutout: null,
                 text: dbSlide.text === 'Memory Moment' ? '' : dbSlide.text,
-                rotation: dbSlide.rotation
+                rotation: dbSlide.rotation,
+                duration: dbSlide.duration || null // per-slide duration (null = use global)
             });
         }
 
@@ -1192,6 +1224,13 @@ function updateTimelineDisplay() {
     const textTimeline = document.getElementById('timeline-text-cells');
     const audioSegment = document.getElementById('timeline-audio-segment');
     
+    // Compute per-slide pixel widths proportional to duration
+    const MIN_CELL_W = 60; // px
+    const MAX_CELL_W = 200; // px
+    const slideDurs = state.slides.map(s => getSlideDuration(s));
+    const maxDur = Math.max(...slideDurs, state.slideDuration);
+    const cellWidths = slideDurs.map(d => Math.round(MIN_CELL_W + (d / maxDur) * (MAX_CELL_W - MIN_CELL_W)));
+
     if (videoTimeline) {
         videoTimeline.innerHTML = '';
         state.slides.forEach((slide, idx) => {
@@ -1199,6 +1238,9 @@ function updateTimelineDisplay() {
             cell.className = 'timeline-cell video-cell';
             cell.dataset.id = slide.id;
             cell.setAttribute('draggable', slide.processing ? 'false' : 'true');
+            cell.style.width = cellWidths[idx] + 'px';
+            cell.style.minWidth = cellWidths[idx] + 'px';
+            cell.style.maxWidth = cellWidths[idx] + 'px';
             
             if (slide.processing) {
                 cell.classList.add('processing');
@@ -1207,17 +1249,17 @@ function updateTimelineDisplay() {
                     <span class="cell-label">Proc...</span>
                 `;
             } else {
+                const durLabel = getSlideDuration(slide).toFixed(1) + 's';
                 cell.innerHTML = `
                     <img src="${slide.img.src}" class="cell-thumb">
                     <span class="cell-label">Photo ${idx + 1}</span>
+                    <span class="cell-dur-badge">${durLabel}</span>
                 `;
                 cell.style.cursor = 'pointer';
                 
-                // Drag start / end on timeline cell
                 cell.addEventListener('dragstart', (e) => {
                     e.dataTransfer.setData('text/plain', slide.id);
                     cell.classList.add('dragging-cell');
-                    // Small timeout to allow visual drag feedback to remain correct
                     setTimeout(() => cell.style.opacity = '0.5', 0);
                 });
                 
@@ -1227,19 +1269,14 @@ function updateTimelineDisplay() {
                 });
                 
                 cell.addEventListener('click', (e) => {
-                    e.stopPropagation(); // Prevent timeline track container click trigger
-                    state.playTime = idx * state.slideDuration;
-                    if (renderer) {
-                        renderer.draw(state.playTime);
-                    }
-                    updateHudTimeline(state.slides.length * state.slideDuration);
+                    e.stopPropagation();
+                    state.playTime = getSlideStartTime(idx);
+                    if (renderer) renderer.draw(state.playTime);
+                    updateHudTimeline(getVideoTotalDuration());
                     
-                    // Select this photo in Step 2 if Step 2 is active
                     state.activeSlideIdx = idx;
                     if (state.currentStep === 2) {
-                        if (DOM.editorPhotoSelect) {
-                            DOM.editorPhotoSelect.value = idx;
-                        }
+                        if (DOM.editorPhotoSelect) DOM.editorPhotoSelect.value = idx;
                         loadSlideIntoEditor();
                     }
                 });
@@ -1258,24 +1295,22 @@ function updateTimelineDisplay() {
         state.slides.forEach((slide, idx) => {
             const cell = document.createElement('div');
             cell.className = 'timeline-cell text-cell';
+            cell.style.width = cellWidths[idx] + 'px';
+            cell.style.minWidth = cellWidths[idx] + 'px';
+            cell.style.maxWidth = cellWidths[idx] + 'px';
             const textVal = slide.text ? `"${slide.text}"` : '(No caption)';
             cell.innerHTML = `<span class="cell-text-bubble">${textVal}</span>`;
             if (!slide.processing) {
                 cell.style.cursor = 'pointer';
                 cell.addEventListener('click', (e) => {
-                    e.stopPropagation(); // Prevent timeline track container click trigger
-                    state.playTime = idx * state.slideDuration;
-                    if (renderer) {
-                        renderer.draw(state.playTime);
-                    }
-                    updateHudTimeline(state.slides.length * state.slideDuration);
+                    e.stopPropagation();
+                    state.playTime = getSlideStartTime(idx);
+                    if (renderer) renderer.draw(state.playTime);
+                    updateHudTimeline(getVideoTotalDuration());
                     
-                    // Select this photo in Step 2 if Step 2 is active
                     state.activeSlideIdx = idx;
                     if (state.currentStep === 2) {
-                        if (DOM.editorPhotoSelect) {
-                            DOM.editorPhotoSelect.value = idx;
-                        }
+                        if (DOM.editorPhotoSelect) DOM.editorPhotoSelect.value = idx;
                         loadSlideIntoEditor();
                     }
                 });
@@ -1300,15 +1335,19 @@ function updateTimelineDisplay() {
         }
         audioSegment.textContent = text;
         
-        // Dynamically align the audio track's width to match video cells length
+        // Dynamically align the audio track's width to match video cells total length
         if (state.slides.length > 0) {
-            const totalCellsWidth = state.slides.length * (70 + 6) - 6;
+            const GAP = 6;
+            const totalCellsWidth = cellWidths.reduce((sum, w) => sum + w + GAP, 0) - GAP;
             audioSegment.style.width = totalCellsWidth + 'px';
         } else {
             audioSegment.style.width = '100%';
         }
     }
 }
+
+
+
 
 // Load pre-defined song (Subha Hone Na De)
 function loadPredefinedSong() {
@@ -1336,7 +1375,7 @@ function loadPredefinedSong() {
             showToast("🎵 'Subha Hone Na De' loaded!");
             
             if (state.isPlaying) {
-                audio.start(onAudioBeat);
+                audio.start(onAudioBeat, state.playTime);
             }
             
             if (state.speedMode === 'auto') {
@@ -1355,7 +1394,7 @@ function loadPredefinedSong() {
             if (DOM.musicSelect) DOM.musicSelect.value = 'lofi';
             audio.setTheme('lofi');
             if (state.isPlaying) {
-                audio.start(onAudioBeat);
+                audio.start(onAudioBeat, state.playTime);
             }
             updateTimelineDisplay();
         });
@@ -1384,51 +1423,118 @@ function populateCutoutSelector() {
 // Generate Step 3 caption inputs
 function generateCaptionsEditor() {
     DOM.captionsContainer.innerHTML = '';
+
     state.slides.forEach((slide, idx) => {
         const item = document.createElement('div');
         item.className = 'caption-editor-item';
+
+        const currentDur = getSlideDuration(slide);
+        const bpm = audio.bpm || 90;
+        const beatDur = 60 / bpm;
+        const rotDeg = Math.round((slide.rotation || 0) * 180 / Math.PI);
+
         item.innerHTML = `
-            <div style="display: flex; flex-direction: column; width: 100%; gap: 8px;">
-                <div style="display: flex; align-items: center; gap: 8px;">
+            <div class="cai-inner">
+                <!-- Header row: number + caption input -->
+                <div class="cai-row">
                     <span class="caption-num">${idx + 1}</span>
-                    <input type="text" class="caption-input" data-idx="${idx}" value="${slide.text}" placeholder="Enter caption text..." style="flex: 1;">
+                    <input type="text" class="caption-input" data-idx="${idx}"
+                           value="${slide.text || ''}" placeholder="Enter caption text..." style="flex:1;">
                 </div>
-                <div style="display: flex; align-items: center; gap: 8px; padding-left: 28px;">
-                    <span style="font-size: 11px; color: var(--text-muted);">Rotation:</span>
-                    <input type="range" class="rotation-slider custom-slider" data-idx="${idx}" min="-30" max="30" value="${Math.round((slide.rotation || 0) * 180 / Math.PI)}" style="flex: 1;">
-                    <span class="rotation-val" data-idx="${idx}" style="font-size: 11px; width: 28px; text-align: right;">${Math.round((slide.rotation || 0) * 180 / Math.PI)}°</span>
+
+                <!-- Rotation row -->
+                <div class="cai-row cai-indent">
+                    <span class="cai-label">Rotation</span>
+                    <input type="range" class="rotation-slider custom-slider" data-idx="${idx}"
+                           min="-30" max="30" value="${rotDeg}" style="flex:1;">
+                    <span class="rotation-val cai-val" data-idx="${idx}">${rotDeg}°</span>
+                </div>
+
+                <!-- Duration row -->
+                <div class="cai-row cai-indent" style="margin-top:4px;">
+                    <span class="cai-label">Duration</span>
+                    <input type="range" class="dur-slider custom-slider" data-idx="${idx}"
+                           min="0.5" max="10" step="0.1" value="${currentDur.toFixed(1)}" style="flex:1;">
+                    <input type="number" class="dur-number" data-idx="${idx}"
+                           min="0.5" max="30" step="0.1" value="${currentDur.toFixed(1)}">
+                    <span class="cai-unit">s</span>
+                </div>
+
+                <!-- Beat-sync shortcut buttons -->
+                <div class="cai-row cai-indent cai-beat-row" data-idx="${idx}">
+                    <span class="cai-label">Beat sync</span>
+                    <div class="beat-btn-group">
+                        <button class="beat-btn" data-idx="${idx}" data-beats="0.5" title="½ beat"
+                                data-dur="${(beatDur * 0.5).toFixed(2)}">½</button>
+                        <button class="beat-btn" data-idx="${idx}" data-beats="1" title="1 beat"
+                                data-dur="${(beatDur * 1).toFixed(2)}">1</button>
+                        <button class="beat-btn" data-idx="${idx}" data-beats="2" title="2 beats"
+                                data-dur="${(beatDur * 2).toFixed(2)}">2</button>
+                        <button class="beat-btn" data-idx="${idx}" data-beats="4" title="4 beats"
+                                data-dur="${(beatDur * 4).toFixed(2)}">4</button>
+                        <span class="beat-bpm-hint">${bpm} BPM</span>
+                    </div>
                 </div>
             </div>
         `;
-        
+
+        // Caption input
         item.querySelector('.caption-input').addEventListener('input', (e) => {
-            const index = parseInt(e.target.dataset.idx);
-            state.slides[index].text = e.target.value;
-            // Force re-update renderer references
+            const i = parseInt(e.target.dataset.idx);
+            state.slides[i].text = e.target.value;
             renderer.setSlides(state.slides);
-            
-            // Sync with editor dropdown label
-            const option = DOM.editorPhotoSelect.options[index];
-            if (option) {
-                option.textContent = `Image ${index + 1}: ${e.target.value || 'Untitled'}`;
-            }
+            const option = DOM.editorPhotoSelect.options[i];
+            if (option) option.textContent = `Image ${i + 1}: ${e.target.value || 'Untitled'}`;
             updateTimelineDisplay();
             triggerAutosave();
         });
 
+        // Rotation slider
         item.querySelector('.rotation-slider').addEventListener('input', (e) => {
-            const index = parseInt(e.target.dataset.idx);
+            const i = parseInt(e.target.dataset.idx);
             const val = parseInt(e.target.value);
-            state.slides[index].rotation = val * Math.PI / 180;
+            state.slides[i].rotation = val * Math.PI / 180;
             item.querySelector('.rotation-val').textContent = val + '°';
-            // Force re-update renderer references
             renderer.setSlides(state.slides);
             triggerAutosave();
         });
-        
+
+        // Duration slider & number input — shared helper
+        function applyDuration(i, newDur, item) {
+            const clamped = Math.max(0.5, Math.min(30, parseFloat(newDur) || state.slideDuration));
+            state.slides[i].duration = parseFloat(clamped.toFixed(2));
+            // Sync both controls
+            item.querySelector('.dur-slider').value = Math.min(clamped, 10);
+            item.querySelector('.dur-number').value = clamped.toFixed(1);
+            renderer.setSlides(state.slides);
+            updateTimelineDisplay();
+            triggerAutosave();
+        }
+
+        item.querySelector('.dur-slider').addEventListener('input', (e) => {
+            applyDuration(parseInt(e.target.dataset.idx), e.target.value, item);
+        });
+
+        item.querySelector('.dur-number').addEventListener('change', (e) => {
+            applyDuration(parseInt(e.target.dataset.idx), e.target.value, item);
+        });
+
+        // Beat-sync buttons
+        item.querySelectorAll('.beat-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const i = parseInt(btn.dataset.idx);
+                const dur = parseFloat(btn.dataset.dur);
+                applyDuration(i, dur, item);
+                // Visual feedback
+                item.querySelectorAll('.beat-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+            });
+        });
+
         DOM.captionsContainer.appendChild(item);
     });
 }
+
 
 // Event Listeners Setup
 function setupEventListeners() {
@@ -1752,7 +1858,7 @@ function setupEventListeners() {
             configureAudioEditorSliders(decodedBuffer.duration);
             
             if (state.isPlaying) {
-                audio.start(onAudioBeat);
+                audio.start(onAudioBeat, state.playTime);
             }
             
             // Show success toast
@@ -1864,7 +1970,7 @@ function setupEventListeners() {
             const rect = DOM.hudProgressBar.getBoundingClientRect();
             const clientX = e.touches ? e.touches[0].clientX : e.clientX;
             const percent = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
-            const totalDuration = state.slides.length * state.slideDuration;
+            const totalDuration = getVideoTotalDuration();
             state.playTime = percent * totalDuration;
             if (renderer) {
                 renderer.draw(state.playTime);
@@ -1880,6 +1986,10 @@ function setupEventListeners() {
             const upHandler = () => {
                 window.removeEventListener('mousemove', moveHandler);
                 window.removeEventListener('mouseup', upHandler);
+                // Seek audio when dragging finishes
+                if (state.isPlaying && (state.musicTheme === 'custom' || state.musicTheme === 'desi_boyz')) {
+                    audio.syncPlayback(state.playTime);
+                }
             };
             window.addEventListener('mousemove', moveHandler);
             window.addEventListener('mouseup', upHandler);
@@ -1893,6 +2003,10 @@ function setupEventListeners() {
             const upHandler = () => {
                 window.removeEventListener('touchmove', moveHandler);
                 window.removeEventListener('touchend', upHandler);
+                // Seek audio when dragging finishes
+                if (state.isPlaying && (state.musicTheme === 'custom' || state.musicTheme === 'desi_boyz')) {
+                    audio.syncPlayback(state.playTime);
+                }
             };
             window.addEventListener('touchmove', moveHandler);
             window.addEventListener('touchend', upHandler);
@@ -1913,12 +2027,28 @@ function setupEventListeners() {
             const scrollX = relativeX + timelineContainer.scrollLeft;
             const timelineX = scrollX - 130 - 16; // 130px header + 16px timeline padding
             
-            const cellWidth = 70;
-            const cellGap = 6;
-            const pixelsPerSecond = (cellWidth + cellGap) / state.slideDuration;
-            const targetTime = timelineX / pixelsPerSecond;
-            const totalDuration = state.slides.length * state.slideDuration;
+            // Find which slide the click fell in using per-slide pixel widths
+            const MIN_CELL_W = 60, MAX_CELL_W = 200, GAP = 6;
+            const slideDurs = state.slides.map(s => getSlideDuration(s));
+            const maxDur = Math.max(...slideDurs, state.slideDuration);
+            const cellWidths = slideDurs.map(d => Math.round(MIN_CELL_W + (d / maxDur) * (MAX_CELL_W - MIN_CELL_W)));
+
+            let px = 0, targetTime = 0;
+            let found = false;
+            for (let i = 0; i < state.slides.length; i++) {
+                const cw = cellWidths[i] + GAP;
+                if (timelineX < px + cw || i === state.slides.length - 1) {
+                    const localFrac = Math.max(0, Math.min(1, (timelineX - px) / cw));
+                    targetTime = getSlideStartTime(i) + localFrac * slideDurs[i];
+                    found = true;
+                    break;
+                }
+                px += cw;
+            }
+            if (!found) targetTime = getVideoTotalDuration();
+            const totalDuration = getVideoTotalDuration();
             
+
             state.playTime = Math.max(0, Math.min(totalDuration, targetTime));
             if (renderer) {
                 renderer.draw(state.playTime);
@@ -1937,6 +2067,10 @@ function setupEventListeners() {
             const upHandler = () => {
                 window.removeEventListener('mousemove', moveHandler);
                 window.removeEventListener('mouseup', upHandler);
+                // Seek audio when dragging finishes
+                if (state.isPlaying && (state.musicTheme === 'custom' || state.musicTheme === 'desi_boyz')) {
+                    audio.syncPlayback(state.playTime);
+                }
             };
             window.addEventListener('mousemove', moveHandler);
             window.addEventListener('mouseup', upHandler);
@@ -1951,6 +2085,10 @@ function setupEventListeners() {
             const upHandler = () => {
                 window.removeEventListener('touchmove', moveHandler);
                 window.removeEventListener('touchend', upHandler);
+                // Seek audio when dragging finishes
+                if (state.isPlaying && (state.musicTheme === 'custom' || state.musicTheme === 'desi_boyz')) {
+                    audio.syncPlayback(state.playTime);
+                }
             };
             window.addEventListener('touchmove', moveHandler);
             window.addEventListener('touchend', upHandler);
@@ -1986,14 +2124,13 @@ function setupEventListeners() {
         DOM.hudRewindBtn.addEventListener('click', () => {
             state.playTime = Math.max(0, state.playTime - 3);
             if (renderer) renderer.draw(state.playTime);
-            const totalDuration = state.slides.length * state.slideDuration;
-            updateHudTimeline(totalDuration);
+            updateHudTimeline(getVideoTotalDuration());
         });
     }
 
     if (DOM.hudForwardBtn) {
         DOM.hudForwardBtn.addEventListener('click', () => {
-            const totalDuration = state.slides.length * state.slideDuration;
+            const totalDuration = getVideoTotalDuration();
             state.playTime = Math.min(totalDuration, state.playTime + 3);
             if (renderer) renderer.draw(state.playTime);
             updateHudTimeline(totalDuration);
@@ -3020,7 +3157,7 @@ function togglePlayback() {
             console.warn("[Playback] Music volume is set to 0% (muted). You won't hear any sound!");
         }
         audio.setTheme(state.musicTheme);
-        audio.start(onAudioBeat);
+        audio.start(onAudioBeat, state.playTime);
     } else {
         DOM.hudPlayBtn.innerHTML = '<i data-lucide="play" style="width:16px;height:16px;"></i>';
         if (window.lucide) lucide.createIcons();
@@ -3050,7 +3187,7 @@ function animationTick(timestamp) {
         
         if (state.isPlaying && !state.isRecording) {
             state.playTime += dt;
-            const totalDuration = state.slides.length * state.slideDuration;
+            const totalDuration = getVideoTotalDuration();
             
             if (state.playTime >= totalDuration) {
                 state.playTime = 0;
@@ -3462,7 +3599,7 @@ async function startExportingVideo() {
         showToast("⚠️ Exporting video only (audio mixing not supported on this browser)");
     }
     
-    const totalDuration = state.slides.length * state.slideDuration;
+    const totalDuration = getVideoTotalDuration();
     
     DOM.exportStatusText.textContent = "Rendering frames...";
     showToast("⚠️ Please keep this tab active and in the foreground for best export quality.");
@@ -3569,9 +3706,9 @@ function configureAudioEditorSliders(duration) {
 }
 
 function autoTrimCustomAudio() {
-    if (!state.customAudioFileBlob || !audio.customAudioBuffer) return;
+    if (!audio.customAudioBuffer) return;
     
-    const videoLength = state.slides.length * state.slideDuration;
+    const videoLength = getVideoTotalDuration();
     const audioDuration = audio.customAudioBuffer.duration;
     
     // Clamp state.customAudioStart to stay within valid limits
@@ -3608,7 +3745,7 @@ function autoTrimCustomAudio() {
     }
     
     // If playing custom audio, hot-reload to apply the trim changes
-    if (state.isPlaying && state.musicTheme === 'custom') {
+    if (state.isPlaying && (state.musicTheme === 'custom' || state.musicTheme === 'desi_boyz')) {
         audio.restartCustomBuffer();
     }
 }

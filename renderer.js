@@ -175,6 +175,38 @@ export class CollageRenderer {
         return palettes[this.bgPalette] || palettes.pastel;
     }
 
+    /**
+     * Get the active slide and local timing at global time t.
+     * Supports variable per-slide durations (slide.duration overrides this.slideDuration).
+     * Returns { slide, prevSlide, slideIdx, localTime, slideDur, totalDuration }
+     */
+    getSlideAtTime(t) {
+        if (this.slides.length === 0) return null;
+
+        let totalDuration = 0;
+        const durations = this.slides.map(s => s.duration || this.slideDuration);
+        for (const d of durations) totalDuration += d;
+
+        const time = ((t % totalDuration) + totalDuration) % totalDuration;
+
+        let accumulated = 0;
+        let slideIdx = 0;
+        for (let i = 0; i < this.slides.length; i++) {
+            if (time < accumulated + durations[i]) {
+                slideIdx = i;
+                break;
+            }
+            accumulated += durations[i];
+            slideIdx = i; // last slide fallback
+        }
+
+        const localTime = time - accumulated;
+        const slideDur = durations[slideIdx];
+        const prevSlide = this.slides[(slideIdx - 1 + this.slides.length) % this.slides.length];
+
+        return { slide: this.slides[slideIdx], prevSlide, slideIdx, localTime, slideDur, totalDuration };
+    }
+
     // Main Draw Function (called at time t in seconds)
     draw(t) {
         if (this.slides.length === 0) {
@@ -188,20 +220,15 @@ export class CollageRenderer {
             return;
         }
 
-        const totalDuration = this.slides.length * this.slideDuration;
-        const time = ((t % totalDuration) + totalDuration) % totalDuration;
-        
-        const slideIdx = Math.floor(time / this.slideDuration);
-        const localTime = time % this.slideDuration;
-        
-        const slide = this.slides[slideIdx];
-        const prevSlide = this.slides[(slideIdx - 1 + this.slides.length) % this.slides.length];
-        
+        const info = this.getSlideAtTime(t);
+        if (!info) return;
+        const { slide, prevSlide, slideIdx, localTime, slideDur } = info;
+
         // Guard: skip draw if slide image not ready
         if (!slide || !slide.img) return;
-        
+
         this.ctx.save();
-        this.drawCleanSlide(slide, prevSlide, localTime, slideIdx, t);
+        this.drawCleanSlide(slide, prevSlide, localTime, slideIdx, t, slideDur);
         this.ctx.restore();
     }
 
@@ -245,8 +272,9 @@ export class CollageRenderer {
         this.ctx.fillText('Upload 5-20 photos in Step 1 to begin', w / 2, h / 2 + 20);
     }
 
-    drawCleanSlide(slide, prevSlide, localTime, slideIdx, t) {
+    drawCleanSlide(slide, prevSlide, localTime, slideIdx, t, slideDur) {
         if (!slide || !slide.img) return; // Safety guard
+        const dur = slideDur || this.slideDuration; // Use per-slide duration if provided
         const w = this.canvas.width;
         const h = this.canvas.height;
         const cx = w / 2;
@@ -262,15 +290,10 @@ export class CollageRenderer {
         let destH = w / aspect;
         if (destH > h) { destH = h; destW = destH * aspect; }
 
-        // ─── Animation timeline (fast & smooth) ─────────────────────────
-        // 0.00s → 0.15s : Cutout fades in quickly on top of prev photo
-        // 0.15s → 0.55s : Cutout fully visible (hold)
-        // 0.55s → 0.95s : Full photo background fades in (0.4 s)
-        // 0.95s → end   : Complete photo visible — hold until next slide
-        // ────────────────────────────────────────────────────────────────
-        const CUTOUT_FADE  = Math.min(0.15, this.slideDuration * 0.1); // seconds to fade cutout in
-        const BG_START     = this.slideDuration * (this.cutoutHoldRatio || 0.35); // when background starts fading
-        const BG_FADE      = Math.min(0.40, this.slideDuration * 0.25); // duration of background fade
+        // ─── Animation timeline (scales with individual slide duration) ───
+        const CUTOUT_FADE  = Math.min(0.15, dur * 0.1);
+        const BG_START     = dur * (this.cutoutHoldRatio || 0.35);
+        const BG_FADE      = Math.min(0.40, dur * 0.25);
         const BG_END       = BG_START + BG_FADE;
 
         // Ease helper — smooth-step curve for less mechanical feel
@@ -283,7 +306,7 @@ export class CollageRenderer {
 
         // Is this the very first slide on the first play-through?
         // If yes, there's no "previous complete photo" to show underneath.
-        const isFirstPass = slideIdx === 0 && t < this.slideDuration;
+        const isFirstPass = slideIdx === 0 && t < dur;
 
         // ── LAYER 1: Previous slide's COMPLETE full photo ─────────────────
         // Shown as the base canvas for every slide except first-ever pass.

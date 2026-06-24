@@ -189,7 +189,8 @@ export async function saveSlides(projectId, slides) {
                 imgBlob: slide.imgBlob,     // Original image (Blob)
                 maskBlob: slide.maskBlob,   // Mask image (Blob)
                 text: slide.text,           // Caption string
-                rotation: slide.rotation    // Rotation angle
+                rotation: slide.rotation,   // Rotation angle
+                duration: slide.duration || null // Individual slide duration
             };
 
             const request = store.put(record);

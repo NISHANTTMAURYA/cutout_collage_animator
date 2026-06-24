@@ -83,7 +83,7 @@ export class AudioEngine {
         this.beatDuration = 60 / this.bpm;
     }
 
-    start(onBeat) {
+    start(onBeat, offset = 0) {
         this.init();
         if (this.isPlaying) this.stop();
         
@@ -106,7 +106,7 @@ export class AudioEngine {
         
         if ((this.activeTheme === 'custom' || this.activeTheme === 'desi_boyz') && this.customAudioBuffer) {
             // Play custom audio buffer & start beat sync loop
-            this.playCustomBuffer();
+            this.playCustomBuffer(offset);
         } else if (this.activeTheme !== 'none') {
             // Start procedural sequencer
             this.schedulerLoop();
@@ -315,7 +315,7 @@ export class AudioEngine {
         return { bpm: estimatedBPM, beatTimes };
     }
 
-    playCustomBuffer() {
+    playCustomBuffer(offset = 0) {
         if (!this.isPlaying || (this.activeTheme !== 'custom' && this.activeTheme !== 'desi_boyz') || !this.customAudioBuffer || !this.ctx) return;
         
         if (this.customAudioSource) {
@@ -325,23 +325,33 @@ export class AudioEngine {
             this.customAudioSource = null;
         }
         
-        console.log("[AudioEngine] Playing custom buffer. Trim Start:", this.customAudioStart, "Trim End:", this.customAudioEnd);
+        const loopStart = this.customAudioStart || 0;
+        const loopEnd = this.customAudioEnd || this.customAudioBuffer.duration;
+        const loopDuration = loopEnd - loopStart;
+        const startOffset = loopStart + (loopDuration > 0 ? (offset % loopDuration) : 0);
+        
+        console.log("[AudioEngine] Playing custom buffer. Trim Start:", this.customAudioStart, "Trim End:", this.customAudioEnd, "Start Offset:", startOffset);
         this.customAudioSource = this.ctx.createBufferSource();
         this.customAudioSource.buffer = this.customAudioBuffer;
         this.customAudioSource.loop = true;
-        this.customAudioSource.loopStart = this.customAudioStart || 0;
-        this.customAudioSource.loopEnd = this.customAudioEnd || this.customAudioBuffer.duration;
+        this.customAudioSource.loopStart = loopStart;
+        this.customAudioSource.loopEnd = loopEnd;
         this.customAudioSource.connect(this.masterGain);
         
-        // Start playback at the loopStart offset
-        this.customAudioSource.start(0, this.customAudioSource.loopStart);
+        // Start playback at the calculated startOffset
+        this.customAudioSource.start(0, startOffset);
         
         // Start beat sync callback loop
         this.startCustomBeatSyncLoop();
     }
 
+    syncPlayback(playTime) {
+        if (!this.isPlaying || (this.activeTheme !== 'custom' && this.activeTheme !== 'desi_boyz') || !this.customAudioBuffer || !this.ctx) return;
+        this.playCustomBuffer(playTime);
+    }
+
     restartCustomBuffer() {
-        this.playCustomBuffer();
+        this.playCustomBuffer(0);
     }
 
     startCustomBeatSyncLoop() {
