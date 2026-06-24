@@ -1,6 +1,6 @@
-import { detectSubject, smoothMask, setModelStatusCallback, loadModel } from './saliency.js?v=8';
-import { AudioEngine } from './audio.js?v=8';
-import { CollageRenderer } from './renderer.js?v=8';
+import { detectSubject, smoothMask, setModelStatusCallback, loadModel } from './saliency.js?v=16';
+import { AudioEngine } from './audio.js?v=16';
+import { CollageRenderer } from './renderer.js?v=16';
 import {
     openDb,
     getProjects,
@@ -9,7 +9,7 @@ import {
     deleteProject,
     getSlides,
     saveSlides
-} from './db.js?v=8';
+} from './db.js?v=16';
 
 // Application State
 const state = {
@@ -29,7 +29,8 @@ const state = {
     bgPalette: 'dark',
     slideDuration: 1.5,
     beatSync: true,
-    musicTheme: 'lofi',
+    musicTheme: 'desi_boyz',
+    captionFont: 'playfair',
     
     // Editor State
     editorTool: 'brush', // 'brush', 'eraser', 'lasso'
@@ -121,6 +122,7 @@ const DOM = {
     slideDurVal: document.getElementById('slide-dur-val'),
     cutoutBorderSelect: document.getElementById('cutout-border-type'),
     bgStyleSelect: document.getElementById('bg-style'),
+    captionFontSelect: document.getElementById('caption-font-select'),
     captionsContainer: document.getElementById('captions-container'),
     toStep4: document.getElementById('to-step-4'),
     backTo2: document.getElementById('back-to-2'),
@@ -260,6 +262,9 @@ window.addEventListener('DOMContentLoaded', () => {
     
     // Initialize local database and projects list
     initProjects().catch(err => console.error('[app] Initialization failed:', err));
+    
+    // Warm up the AI model on startup
+    loadModel().catch(() => {});
     
     // Start Canvas animation tick
     requestAnimationFrame(animationTick);
@@ -556,7 +561,8 @@ async function saveProjectSettingsOnly() {
                 customAudioEnd: state.customAudioEnd,
                 musicVolume: state.musicVolume,
                 speedMode: state.speedMode,
-                videoRatio: state.videoRatio
+                videoRatio: state.videoRatio,
+                captionFont: state.captionFont
             }
         };
         await saveProject(projectRecord);
@@ -591,7 +597,8 @@ async function saveCurrentProjectToDb() {
                 customAudioEnd: state.customAudioEnd,
                 musicVolume: state.musicVolume,
                 speedMode: state.speedMode,
-                videoRatio: state.videoRatio
+                videoRatio: state.videoRatio,
+                captionFont: state.captionFont
             }
         };
         await saveProject(projectRecord);
@@ -652,6 +659,7 @@ async function loadProject(projectId) {
         state.musicVolume = project.settings.musicVolume !== undefined ? project.settings.musicVolume : 0.8;
         state.speedMode = project.settings.speedMode || 'manual';
         state.videoRatio = project.settings.videoRatio || '9-16';
+        state.captionFont = project.settings.captionFont || 'playfair';
 
         // Apply volume to AudioEngine immediately on project load (tracks volume state internally)
         audio.setVolume(state.musicVolume);
@@ -694,6 +702,9 @@ async function loadProject(projectId) {
         if (DOM.videoAspectRatio) {
             DOM.videoAspectRatio.value = state.videoRatio;
         }
+        if (DOM.captionFontSelect) {
+            DOM.captionFontSelect.value = state.captionFont;
+        }
 
         updateSpeedModeUI();
         updateVideoAspectRatio();
@@ -704,6 +715,7 @@ async function loadProject(projectId) {
             renderer.beatSync = state.beatSync;
             renderer.bgPalette = state.bgPalette;
             renderer.borderType = state.borderType;
+            renderer.captionFont = state.captionFont;
         }
     }
 
@@ -756,7 +768,9 @@ async function loadProject(projectId) {
         state.customAudioFileBlob = storedAudio;
         state.customAudioFilename = project.audioFilename || '';
         
-        if (state.musicTheme === 'custom' && state.customAudioFileBlob) {
+        if (state.musicTheme === 'desi_boyz') {
+            loadPredefinedSong();
+        } else if (state.musicTheme === 'custom' && state.customAudioFileBlob) {
             const audioBytes = state.customAudioFileBlob?.byteLength || state.customAudioFileBlob?.size || 0;
             console.log('[app] Restoring audio from IndexedDB:', audioBytes, 'bytes, filename:', state.customAudioFilename);
             // Restore audio using the raw bytes
@@ -789,6 +803,7 @@ async function loadProject(projectId) {
         if (DOM.editorLoader) {
             DOM.editorLoader.style.display = 'none';
         }
+        updateTimelineDisplay();
     }
 }
 
@@ -902,12 +917,16 @@ async function initProjects() {
                 bgPalette: 'dark',
                 slideDuration: 1.5,
                 beatSync: true,
-                musicTheme: 'lofi'
+                musicTheme: 'desi_boyz',
+                captionFont: 'playfair'
             }
         };
         await saveProject(defaultProject);
         state.activeProjectId = defaultId;
         loadMockImages();
+        
+        // Fetch and load default song Subha Hone Na De
+        loadPredefinedSong();
     } else {
         state.activeProjectId = projects[0].id;
         await loadProject(state.activeProjectId);
@@ -933,26 +952,42 @@ function onPhotosUpdated() {
     state.slides.forEach((slide, idx) => {
         const item = document.createElement('div');
         item.className = 'photo-item';
-        item.setAttribute('draggable', 'true');
+        if (slide.processing) {
+            item.classList.add('processing');
+        }
+        item.setAttribute('draggable', slide.processing ? 'false' : 'true');
         item.dataset.id = slide.id;
+        
+        let badgeHtml = `<span class="cutout-status-badge">Cutout</span>`;
+        if (slide.processing) {
+            badgeHtml = `
+                <div class="photo-item-loader">
+                    <div class="spinner-sm"></div>
+                    <span>AI Cutout...</span>
+                </div>
+            `;
+        }
+        
         item.innerHTML = `
             <img src="${slide.img.src}" alt="Uploaded Photo">
             <button class="remove-btn" data-id="${slide.id}">✕</button>
-            <span class="cutout-status-badge">Cutout</span>
+            ${badgeHtml}
         `;
         
         // Drag and Drop Logic
-        item.addEventListener('dragstart', (e) => {
-            e.dataTransfer.setData('text/plain', slide.id);
-            item.classList.add('dragging');
-            // Timeout needed to allow CSS change to render while dragging
-            setTimeout(() => item.style.opacity = '0.5', 0);
-        });
-        
-        item.addEventListener('dragend', () => {
-            item.classList.remove('dragging');
-            item.style.opacity = '1';
-        });
+        if (!slide.processing) {
+            item.addEventListener('dragstart', (e) => {
+                e.dataTransfer.setData('text/plain', slide.id);
+                item.classList.add('dragging');
+                // Timeout needed to allow CSS change to render while dragging
+                setTimeout(() => item.style.opacity = '0.5', 0);
+            });
+            
+            item.addEventListener('dragend', () => {
+                item.classList.remove('dragging');
+                item.style.opacity = '1';
+            });
+        }
         
         // Delete button listener
         item.querySelector('.remove-btn').addEventListener('click', (e) => {
@@ -967,6 +1002,7 @@ function onPhotosUpdated() {
         // Open preview modal on click (skipping delete button clicks)
         item.addEventListener('click', (e) => {
             if (e.target.closest('.remove-btn')) return;
+            if (slide.processing) return;
             openPreviewModal(idx);
         });
         
@@ -979,6 +1015,7 @@ function onPhotosUpdated() {
         DOM.photoGrid.addEventListener('dragover', (e) => {
             e.preventDefault();
             const draggingElement = DOM.photoGrid.querySelector('.dragging');
+            if (!draggingElement) return;
             const target = e.target.closest('.photo-item');
             if (target && target !== draggingElement) {
                 const box = target.getBoundingClientRect();
@@ -989,18 +1026,25 @@ function onPhotosUpdated() {
         
         DOM.photoGrid.addEventListener('drop', (e) => {
             e.preventDefault();
+            const draggingElement = DOM.photoGrid.querySelector('.dragging');
+            if (!draggingElement) return;
             const currentOrderIds = Array.from(DOM.photoGrid.querySelectorAll('.photo-item')).map(el => el.dataset.id);
             state.slides = currentOrderIds.map(id => state.slides.find(s => s.id === id));
             onPhotosUpdated();
         });
     }
     
-    if (state.slides.length >= 5) {
+    const hasProcessing = state.slides.some(s => s.processing);
+    if (state.slides.length >= 5 && !hasProcessing) {
         DOM.toStep2.disabled = false;
         DOM.uploadedSection.style.display = 'block';
     } else {
         DOM.toStep2.disabled = true;
-        DOM.uploadedSection.style.display = 'none';
+        if (state.slides.length > 0) {
+            DOM.uploadedSection.style.display = 'block';
+        } else {
+            DOM.uploadedSection.style.display = 'none';
+        }
     }
     
     // Sync with renderer
@@ -1010,11 +1054,192 @@ function onPhotosUpdated() {
     populateCutoutSelector();
     generateCaptionsEditor();
     checkOutOfRatioPhotos();
+    
+    // Update bottom multi-track timeline display
+    updateTimelineDisplay();
+}
+
+// Sync the bottom editor timeline with the state in real-time
+function updateTimelineDisplay() {
+    const videoTimeline = document.getElementById('timeline-video-cells');
+    const textTimeline = document.getElementById('timeline-text-cells');
+    const audioSegment = document.getElementById('timeline-audio-segment');
+    
+    if (videoTimeline) {
+        videoTimeline.innerHTML = '';
+        state.slides.forEach((slide, idx) => {
+            const cell = document.createElement('div');
+            cell.className = 'timeline-cell video-cell';
+            cell.dataset.id = slide.id;
+            cell.setAttribute('draggable', slide.processing ? 'false' : 'true');
+            
+            if (slide.processing) {
+                cell.classList.add('processing');
+                cell.innerHTML = `
+                    <div class="cell-thumb-placeholder">⌛</div>
+                    <span class="cell-label">Proc...</span>
+                `;
+            } else {
+                cell.innerHTML = `
+                    <img src="${slide.img.src}" class="cell-thumb">
+                    <span class="cell-label">Photo ${idx + 1}</span>
+                `;
+                cell.style.cursor = 'pointer';
+                
+                // Drag start / end on timeline cell
+                cell.addEventListener('dragstart', (e) => {
+                    e.dataTransfer.setData('text/plain', slide.id);
+                    cell.classList.add('dragging-cell');
+                    // Small timeout to allow visual drag feedback to remain correct
+                    setTimeout(() => cell.style.opacity = '0.5', 0);
+                });
+                
+                cell.addEventListener('dragend', () => {
+                    cell.classList.remove('dragging-cell');
+                    cell.style.opacity = '1';
+                });
+                
+                cell.addEventListener('click', (e) => {
+                    e.stopPropagation(); // Prevent timeline track container click trigger
+                    state.playTime = idx * state.slideDuration;
+                    if (renderer) {
+                        renderer.draw(state.playTime);
+                    }
+                    updateHudTimeline(state.slides.length * state.slideDuration);
+                    
+                    // Select this photo in Step 2 if Step 2 is active
+                    state.activeSlideIdx = idx;
+                    if (state.currentStep === 2) {
+                        if (DOM.editorPhotoSelect) {
+                            DOM.editorPhotoSelect.value = idx;
+                        }
+                        loadSlideIntoEditor();
+                    }
+                });
+                
+                cell.addEventListener('dblclick', (e) => {
+                    e.stopPropagation();
+                    openPreviewModal(idx);
+                });
+            }
+            videoTimeline.appendChild(cell);
+        });
+    }
+    
+    if (textTimeline) {
+        textTimeline.innerHTML = '';
+        state.slides.forEach((slide, idx) => {
+            const cell = document.createElement('div');
+            cell.className = 'timeline-cell text-cell';
+            const textVal = slide.text ? `"${slide.text}"` : '(No caption)';
+            cell.innerHTML = `<span class="cell-text-bubble">${textVal}</span>`;
+            if (!slide.processing) {
+                cell.style.cursor = 'pointer';
+                cell.addEventListener('click', (e) => {
+                    e.stopPropagation(); // Prevent timeline track container click trigger
+                    state.playTime = idx * state.slideDuration;
+                    if (renderer) {
+                        renderer.draw(state.playTime);
+                    }
+                    updateHudTimeline(state.slides.length * state.slideDuration);
+                    
+                    // Select this photo in Step 2 if Step 2 is active
+                    state.activeSlideIdx = idx;
+                    if (state.currentStep === 2) {
+                        if (DOM.editorPhotoSelect) {
+                            DOM.editorPhotoSelect.value = idx;
+                        }
+                        loadSlideIntoEditor();
+                    }
+                });
+                
+                cell.addEventListener('dblclick', (e) => {
+                    e.stopPropagation();
+                    openPreviewModal(idx);
+                });
+            }
+            textTimeline.appendChild(cell);
+        });
+    }
+    
+    if (audioSegment) {
+        let text = '🔇 No Backing Audio';
+        if (state.musicTheme === 'lofi') {
+            text = '🎵 Lofi Dream (Chill Synth)';
+        } else if (state.musicTheme === 'desi_boyz') {
+            text = '🎵 Subha Hone Na De (Desi Boyz)';
+        } else if (state.musicTheme === 'custom') {
+            text = `📁 Custom Audio: ${state.customAudioFilename || 'Loaded'}`;
+        }
+        audioSegment.textContent = text;
+        
+        // Dynamically align the audio track's width to match video cells length
+        if (state.slides.length > 0) {
+            const totalCellsWidth = state.slides.length * (70 + 6) - 6;
+            audioSegment.style.width = totalCellsWidth + 'px';
+        } else {
+            audioSegment.style.width = '100%';
+        }
+    }
+}
+
+// Load pre-defined song (Subha Hone Na De)
+function loadPredefinedSong() {
+    showToast("🎵 Loading 'Subha Hone Na De'...");
+    
+    // Hide custom editor controls since it's a default song
+    if (DOM.customAudioEditor) DOM.customAudioEditor.style.display = 'none';
+    
+    fetch('./Subha%20Hone%20Na%20De%20Desi%20Boyz%20128%20Kbps.mp3')
+        .then(response => {
+            if (!response.ok) throw new Error("Network response was not ok");
+            return response.arrayBuffer();
+        })
+        .then(arrayBuffer => {
+            return audio.loadCustomAudioFile(arrayBuffer);
+        })
+        .then(decodedBuffer => {
+            audio.setTheme('desi_boyz'); // Override the theme to desi_boyz
+            state.musicTheme = 'desi_boyz';
+            
+            // Set trim boundaries to full song by default
+            audio.customAudioStart = 0;
+            audio.customAudioEnd = decodedBuffer.duration;
+            
+            showToast("🎵 'Subha Hone Na De' loaded!");
+            
+            if (state.isPlaying) {
+                audio.start(onAudioBeat);
+            }
+            
+            if (state.speedMode === 'auto') {
+                syncSpeedToBeats();
+            } else {
+                autoTrimCustomAudio();
+            }
+            updateTimelineDisplay();
+            triggerAutosave();
+        })
+        .catch(err => {
+            console.error("Failed to load Subha Hone Na De:", err);
+            showToast("❌ Failed to load song.");
+            // Revert to lofi
+            state.musicTheme = 'lofi';
+            if (DOM.musicSelect) DOM.musicSelect.value = 'lofi';
+            audio.setTheme('lofi');
+            if (state.isPlaying) {
+                audio.start(onAudioBeat);
+            }
+            updateTimelineDisplay();
+        });
 }
 
 function enableNextSteps() {
-    DOM.stepBtns.forEach(btn => {
-        btn.disabled = false;
+    const hasProcessing = state.slides.some(s => s.processing);
+    DOM.stepBtns.forEach((btn, idx) => {
+        if (idx > 0) {
+            btn.disabled = (state.slides.length < 5 || hasProcessing);
+        }
     });
 }
 
@@ -1060,6 +1285,7 @@ function generateCaptionsEditor() {
             if (option) {
                 option.textContent = `Image ${index + 1}: ${e.target.value || 'Untitled'}`;
             }
+            updateTimelineDisplay();
             triggerAutosave();
         });
 
@@ -1276,6 +1502,14 @@ function setupEventListeners() {
         });
     }
 
+    if (DOM.captionFontSelect) {
+        DOM.captionFontSelect.addEventListener('change', (e) => {
+            state.captionFont = e.target.value;
+            if (renderer) renderer.captionFont = state.captionFont;
+            triggerAutosave();
+        });
+    }
+
     // Music theme selector
     DOM.musicSelect.addEventListener('change', (e) => {
         state.musicTheme = e.target.value;
@@ -1290,7 +1524,9 @@ function setupEventListeners() {
             }
         }
         
-        if (state.musicTheme === 'custom') {
+        if (state.musicTheme === 'desi_boyz') {
+            loadPredefinedSong();
+        } else if (state.musicTheme === 'custom') {
             if (state.customAudioFileBlob) {
                 // Audio already loaded — show editor and resume playback
                 DOM.customAudioEditor.style.display = 'flex';
@@ -1505,6 +1741,89 @@ function setupEventListeners() {
             window.addEventListener('touchmove', moveHandler);
             window.addEventListener('touchend', upHandler);
         }, { passive: true });
+    }
+
+    // Timeline seek / scrub controls
+    const timelineContainer = document.querySelector('.timeline-tracks-container');
+    if (timelineContainer) {
+        const handleTimelineSeek = (e) => {
+            const rect = timelineContainer.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const relativeX = clientX - rect.left;
+            
+            // Ignore clicks on the sticky track info headers (130px width)
+            if (relativeX <= 130) return;
+            
+            const scrollX = relativeX + timelineContainer.scrollLeft;
+            const timelineX = scrollX - 130 - 16; // 130px header + 16px timeline padding
+            
+            const cellWidth = 70;
+            const cellGap = 6;
+            const pixelsPerSecond = (cellWidth + cellGap) / state.slideDuration;
+            const targetTime = timelineX / pixelsPerSecond;
+            const totalDuration = state.slides.length * state.slideDuration;
+            
+            state.playTime = Math.max(0, Math.min(totalDuration, targetTime));
+            if (renderer) {
+                renderer.draw(state.playTime);
+            }
+            updateHudTimeline(totalDuration);
+        };
+        
+        timelineContainer.addEventListener('mousedown', (e) => {
+            // Ignore if clicked on a button, input, or other interactive element directly
+            if (e.target.closest('button') || e.target.closest('input') || e.target.closest('select')) return;
+            handleTimelineSeek(e);
+            
+            const moveHandler = (moveEvent) => {
+                handleTimelineSeek(moveEvent);
+            };
+            const upHandler = () => {
+                window.removeEventListener('mousemove', moveHandler);
+                window.removeEventListener('mouseup', upHandler);
+            };
+            window.addEventListener('mousemove', moveHandler);
+            window.addEventListener('mouseup', upHandler);
+        });
+        
+        timelineContainer.addEventListener('touchstart', (e) => {
+            if (e.target.closest('button') || e.target.closest('input') || e.target.closest('select')) return;
+            handleTimelineSeek(e);
+            const moveHandler = (moveEvent) => {
+                handleTimelineSeek(moveEvent);
+            };
+            const upHandler = () => {
+                window.removeEventListener('touchmove', moveHandler);
+                window.removeEventListener('touchend', upHandler);
+            };
+            window.addEventListener('touchmove', moveHandler);
+            window.addEventListener('touchend', upHandler);
+        }, { passive: true });
+    }
+
+    // Timeline Video Track Drag & Drop Reordering
+    const videoTimeline = document.getElementById('timeline-video-cells');
+    if (videoTimeline) {
+        videoTimeline.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            const draggingElement = videoTimeline.querySelector('.dragging-cell');
+            if (!draggingElement) return;
+            const target = e.target.closest('.video-cell');
+            if (target && target !== draggingElement) {
+                const box = target.getBoundingClientRect();
+                const next = (e.clientX - box.left > box.width / 2);
+                videoTimeline.insertBefore(draggingElement, next ? target.nextSibling : target);
+            }
+        });
+        
+        videoTimeline.addEventListener('drop', (e) => {
+            e.preventDefault();
+            const draggingElement = videoTimeline.querySelector('.dragging-cell');
+            if (!draggingElement) return;
+            const currentOrderIds = Array.from(videoTimeline.querySelectorAll('.video-cell')).map(el => el.dataset.id);
+            state.slides = currentOrderIds.map(id => state.slides.find(s => s.id === id));
+            onPhotosUpdated();
+        });
     }
 
     if (DOM.hudRewindBtn) {
@@ -2139,18 +2458,37 @@ function handleFiles(files) {
         reader.onload = (event) => {
             const img = new Image();
             img.onload = () => {
-                // Auto subject detect on load
+                const slideId = Math.random().toString(36).substr(2, 9);
+                
+                // Add placeholder slide immediately
+                state.slides.push({
+                    id: slideId,
+                    img: img,
+                    mask: null,
+                    cutout: null, // precomputed in renderer
+                    text: '',
+                    processing: true,
+                    rotation: (Math.random() - 0.5) * 8 * Math.PI / 180 // Random -4 to +4 degrees
+                });
+                onPhotosUpdated();
+                enableNextSteps();
+                
+                // Asynchronously run subject detection
                 detectSubject(img, 0.4).then(mask => {
-                    state.slides.push({
-                        id: Math.random().toString(36).substr(2, 9),
-                        img: img,
-                        mask: mask,
-                        cutout: null, // precomputed in renderer
-                        text: '',
-                        rotation: (Math.random() - 0.5) * 8 * Math.PI / 180 // Random -4 to +4 degrees
-                    });
+                    const slide = state.slides.find(s => s.id === slideId);
+                    if (slide) {
+                        slide.mask = mask;
+                        slide.processing = false;
+                        onPhotosUpdated();
+                        enableNextSteps();
+                    }
+                }).catch(err => {
+                    console.error("AI subject detection failed:", err);
+                    // Remove failed slide
+                    state.slides = state.slides.filter(s => s.id !== slideId);
                     onPhotosUpdated();
                     enableNextSteps();
+                    showToast("❌ Failed to process subject cutout.");
                 });
             };
             img.src = event.target.result;
@@ -2581,6 +2919,38 @@ function updateHudTimeline(totalDuration) {
     // Slide counter tag
     const curSlide = Math.floor(state.playTime / state.slideDuration) + 1;
     DOM.hudCounter.textContent = `${Math.min(state.slides.length, curSlide)} / ${state.slides.length}`;
+
+    // Update bottom timeline playhead position
+    const playhead = document.getElementById('timeline-playhead');
+    if (playhead && state.slides.length > 0) {
+        const cellWidth = 70;
+        const cellGap = 6;
+        const pixelsPerSecond = (cellWidth + cellGap) / state.slideDuration;
+        const playheadOffset = state.playTime * pixelsPerSecond;
+        const playheadLeft = 130 + 16 + playheadOffset;
+        playhead.style.left = playheadLeft + 'px';
+        
+        // Auto-scroll the timeline container to keep playhead in view
+        const container = document.querySelector('.timeline-tracks-container');
+        if (container) {
+            const containerWidth = container.clientWidth;
+            const scrollLeft = container.scrollLeft;
+            const stickyHeaderWidth = 130;
+            const playheadRelativeX = playheadLeft - scrollLeft;
+            
+            // If playhead goes beyond the visible area (with margin), scroll to it
+            if (playheadRelativeX > containerWidth - 120) {
+                container.scrollLeft = playheadLeft - (containerWidth - 150);
+            } else if (playheadRelativeX < stickyHeaderWidth + 20) {
+                container.scrollLeft = Math.max(0, playheadLeft - stickyHeaderWidth - 20);
+            }
+        }
+    }
+
+    // Update Step 3 Easing Curve sweep playhead dot
+    if (state.currentStep === 3) {
+        drawTransitionCurve();
+    }
 }
 
 // --- VIDEO EXPORT PIPELINE ---
@@ -3171,4 +3541,99 @@ function checkOutOfRatioPhotos() {
             if (badge) badge.remove();
         }
     });
+}
+
+// Draw the Bezier Easing Curve Graph on Step 3
+function drawTransitionCurve() {
+    const canvas = document.getElementById('bezier-curve-canvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    
+    // Support High DPI displays
+    const rect = canvas.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    ctx.scale(dpr, dpr);
+    
+    const w = rect.width;
+    const h = rect.height;
+    ctx.clearRect(0, 0, w, h);
+    
+    // Draw background grid lines (lavender color palette)
+    ctx.strokeStyle = 'rgba(124, 111, 219, 0.08)';
+    ctx.lineWidth = 1;
+    for (let x = 20; x < w; x += 20) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, h);
+        ctx.stroke();
+    }
+    for (let y = 20; y < h; y += 20) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(w, y);
+        ctx.stroke();
+    }
+    
+    const paddingX = 30;
+    const paddingY = 20;
+    const graphW = w - paddingX * 2;
+    const graphH = h - paddingY * 2;
+    
+    // Easing function: Ease-In-Out
+    const easeInOut = x => x < 0.5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2;
+    
+    // Draw curve path
+    ctx.beginPath();
+    ctx.strokeStyle = '#7c6fdb'; // Accent color
+    ctx.lineWidth = 2.5;
+    for (let i = 0; i <= 100; i++) {
+        const xPercent = i / 100;
+        const yPercent = easeInOut(xPercent);
+        
+        const px = paddingX + xPercent * graphW;
+        const py = paddingY + graphH - yPercent * graphH;
+        
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+    
+    // Draw axes lines (faint border)
+    ctx.strokeStyle = 'rgba(124, 111, 219, 0.2)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(paddingX, paddingY);
+    ctx.lineTo(paddingX, paddingY + graphH);
+    ctx.lineTo(paddingX + graphW, paddingY + graphH);
+    ctx.stroke();
+    
+    // Draw Sweep playhead marker on the curve if playing
+    if (state.slides.length > 0) {
+        const localTime = state.playTime % state.slideDuration;
+        const xPercent = localTime / state.slideDuration;
+        const yPercent = easeInOut(xPercent);
+        
+        const px = paddingX + xPercent * graphW;
+        const py = paddingY + graphH - yPercent * graphH;
+        
+        // Draw vertical playhead line
+        ctx.strokeStyle = 'rgba(124, 111, 219, 0.3)';
+        ctx.setLineDash([3, 3]);
+        ctx.beginPath();
+        ctx.moveTo(px, paddingY);
+        ctx.lineTo(px, paddingY + graphH);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        
+        // Draw glow dot
+        ctx.fillStyle = '#7c6fdb';
+        ctx.shadowColor = 'rgba(124, 111, 219, 0.8)';
+        ctx.shadowBlur = 6;
+        ctx.beginPath();
+        ctx.arc(px, py, 5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0; // reset
+    }
 }

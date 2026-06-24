@@ -3,462 +3,430 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cutout Collage Video Maker | Social Media Storyteller</title>
+    <title>Cutout Collage Video Maker | Premium Desktop Suite</title>
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Playfair+Display:ital,wght@0,700;1,400&family=Reenie+Beanie&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=8">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@500;600;700&family=Outfit:wght@300;400;600;800&family=Playfair+Display:ital,wght@0,700;1,400&family=Satisfy&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css?v=17">
 </head>
 <body>
-    <div class="app-container">
-        <!-- Sidebar Controls -->
-        <aside class="sidebar">
-            <header class="app-header">
-                <div class="logo">
-                    <span class="logo-icon">✨</span>
-                    <h1>Cutout Collage</h1>
-                    <span class="ai-badge badge-connecting" id="ai-badge">AI</span>
-                </div>
-                <p class="subtitle">Social Video Storyteller</p>
-            </header>
+    <div class="app-layout">
+        <!-- Header bar -->
+        <header class="app-header-top">
+            <div class="header-left">UI Cards</div>
+            <div class="app-logo-badge">
+                <span class="logo-text">✨ Cutout Collage</span>
+                <div id="ai-badge" class="ai-badge badge-connecting">Connecting...</div>
+            </div>
+            <div class="header-right">Video editor</div>
+        </header>
 
-            <!-- Project Selector Bar -->
-            <div class="project-bar" id="project-bar">
-                <div class="project-selector-wrapper">
-                    <span class="project-label-icon">📁</span>
-                    <select id="project-select" class="custom-select project-dropdown" title="Active Project">
-                        <!-- Loaded dynamically -->
-                    </select>
+        <!-- Main Workspace -->
+        <div class="workspace-grid">
+            <!-- LEFT SIDEBAR: File explorer & Steps -->
+            <div class="workspace-left">
+                <!-- Panel 1: Steps / Folders -->
+                <div class="editor-card folders-card">
+                    <div class="card-header">All folders</div>
+                    <div class="card-content">
+                        <nav class="steps-nav">
+                            <button class="step-btn active" id="btn-step-upload" data-step="1">
+                                <span class="step-icon">📁</span>
+                                <span class="step-label">1. Upload Photos</span>
+                            </button>
+                            <button class="step-btn" id="btn-step-cutout" data-step="2" disabled>
+                                <span class="step-icon">✂️</span>
+                                <span class="step-label">2. Cutout Editor</span>
+                            </button>
+                            <button class="step-btn" id="btn-step-design" data-step="3" disabled>
+                                <span class="step-icon">🖼️</span>
+                                <span class="step-label">3. Customize Video</span>
+                            </button>
+                            <button class="step-btn" id="btn-step-export" data-step="4" disabled>
+                                <span class="step-icon">⚙️</span>
+                                <span class="step-label">4. Render & Export</span>
+                            </button>
+                        </nav>
+                    </div>
                 </div>
-                <div class="project-actions">
-                    <button class="project-action-btn" id="btn-new-project" title="Create New Project">➕ New</button>
-                    <button class="project-action-btn" id="btn-rename-project" title="Rename Current Project">✏️</button>
-                    <button class="project-action-btn btn-danger-action" id="btn-delete-project" title="Delete Current Project">🗑️</button>
+
+                <!-- Panel 2: Uploads / Files -->
+                <div class="editor-card files-card">
+                    <div class="card-header">All files</div>
+                    <div class="card-content">
+                        <!-- Drop Zone -->
+                        <div class="drop-zone" id="drop-zone">
+                            <input type="file" id="file-input" multiple accept="image/*" class="file-input">
+                            <div class="drop-zone-content">
+                                <span class="drop-icon">📸</span>
+                                <p class="drop-title">Drag & Drop Photos</p>
+                                <p class="drop-or">or click to browse</p>
+                            </div>
+                        </div>
+                        
+                        <!-- Uploaded Section (Photo Grid) -->
+                        <div class="uploaded-list-section" style="display: none;" id="uploaded-section">
+                            <div class="section-title-bar">
+                                <h3>Uploaded (<span id="photo-count">0</span>)</h3>
+                                <button class="text-btn" id="clear-all-photos">Clear</button>
+                            </div>
+                            <div class="photo-grid" id="photo-grid"></div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <!-- Step Indicators -->
-            <nav class="steps-nav">
-                <button class="step-btn active" id="btn-step-upload" data-step="1">
-                    <span class="step-num">1</span>
-                    <span class="step-label">Upload</span>
-                </button>
-                <button class="step-btn" id="btn-step-cutout" data-step="2" disabled>
-                    <span class="step-num">2</span>
-                    <span class="step-label">Cutout Editor</span>
-                </button>
-                <button class="step-btn" id="btn-step-design" data-step="3" disabled>
-                    <span class="step-num">3</span>
-                    <span class="step-label">Customize</span>
-                </button>
-                <button class="step-btn" id="btn-step-export" data-step="4" disabled>
-                    <span class="step-num">4</span>
-                    <span class="step-label">Export</span>
-                </button>
-            </nav>
-
-            <main class="step-content-container">
-                <!-- STEP 1: UPLOAD -->
-                <section class="step-panel active" id="panel-upload" data-step="1">
-                    <div class="panel-header">
-                        <h2>Upload Your Photos</h2>
-                        <p>Select 5 to 20 photos of your travel, pet, friends, or memories.</p>
+            <!-- RIGHT WORKSPACE: Center, Right, and Timeline -->
+            <div class="workspace-main-content">
+                <div class="workspace-top-row">
+                    <!-- CENTER AREA: Video Preview & Toolbar -->
+                    <div class="workspace-center">
+                <!-- Center Toolbar -->
+                <div class="center-toolbar-pill">
+                    <button class="tb-btn active" title="Select Tool">📐</button>
+                    <button class="tb-btn" title="Cutout Magic">✂️</button>
+                    <button class="tb-btn" title="Background">🖼️</button>
+                    <button class="tb-btn" title="Rotate">⟳</button>
+                    <button class="tb-btn" id="tb-btn-project" title="Active Project">⚙️</button>
+                    <div class="project-selector-wrapper" style="margin-left: 8px;">
+                        <select id="project-select" class="custom-select project-dropdown" title="Active Project"></select>
                     </div>
+                    <button class="project-action-btn" id="btn-new-project" title="Create New Project">＋</button>
+                    <button class="project-action-btn" id="btn-rename-project" title="Rename Project">✏️</button>
+                    <button class="project-action-btn" id="btn-delete-project" title="Delete Project">🗑️</button>
+                </div>
 
-                    <div class="drop-zone" id="drop-zone">
-                        <input type="file" id="file-input" multiple accept="image/*" class="file-input">
-                        <div class="drop-zone-content">
-                            <span class="drop-icon">📸</span>
-                            <p class="drop-title">Drag & Drop Photos Here</p>
-                            <p class="drop-or">or click to browse files</p>
-                            <p class="drop-limit">Supports JPG, PNG (5-20 images)</p>
-                        </div>
-                    </div>
-
-                    <div class="uploaded-list-section" style="display: none;" id="uploaded-section">
-                        <div class="section-title-bar">
-                            <h3>Uploaded Photos (<span id="photo-count">0</span>)</h3>
-                            <button class="text-btn" id="clear-all-photos">Clear All</button>
-                        </div>
-                        <div class="photo-grid" id="photo-grid">
-                            <!-- Dynamically generated list -->
-                        </div>
-                    </div>
-
-                    <div class="panel-actions">
-                        <button class="primary-btn wide-btn" id="to-step-2" disabled>
-                            Process Cutouts <span class="arrow">→</span>
-                        </button>
-                    </div>
-                </section>
-
-                <!-- STEP 2: CUTOUT EDITOR -->
-                <section class="step-panel" id="panel-cutout" data-step="2">
-                    <div class="panel-header">
-                        <h2>Refine Cutout Layers</h2>
-                        <p>Adjust the auto-detection or paint directly to edit the mask.</p>
-                    </div>
-
-                    <div class="editor-photo-selector">
-                        <label for="editor-photo-select">Active Image:</label>
-                        <select id="editor-photo-select" class="custom-select"></select>
-                    </div>
-
-                    <div class="interactive-editor-container">
-                        <div class="editor-canvas-wrapper">
-                            <canvas id="editor-canvas"></canvas>
-                            <div class="editor-loader" id="editor-loader" style="display: none;">
-                                <div class="spinner"></div>
-                                <p>Extracting subject...</p>
+                <!-- Preview Screen Card -->
+                <div class="preview-screen-card">
+                    <div class="preview-canvas-container">
+                        <!-- We style .phone-frame to represent the responsive canvas container card -->
+                        <div class="phone-frame ratio-9-16">
+                            <canvas id="preview-canvas" width="540" height="960"></canvas>
+                            <div class="music-note-visualizer" id="music-indicator">
+                                <div class="bar"></div>
+                                <div class="bar"></div>
+                                <div class="bar"></div>
                             </div>
                         </div>
                     </div>
+                </div>
 
-                    <div class="editor-controls">
-                        <div class="control-row" style="grid-template-columns: repeat(5,1fr);">
-                            <button class="editor-tool-btn active" id="tool-brush" title="Paint cutout area">
-                                🖌️ Brush
-                            </button>
-                            <button class="editor-tool-btn" id="tool-eraser" title="Erase cutout area">
-                                🧽 Eraser
-                            </button>
-                            <button class="editor-tool-btn" id="tool-lasso" title="N-point lasso: click points around subject → click first point or double-click to close. Shift+close to subtract.">
-                                🔷 Lasso
-                            </button>
-                            <button class="editor-tool-btn" id="tool-magic" title="Re-run Auto Detection">
-                                🪄 Auto
-                            </button>
-                            <button class="editor-tool-btn" id="tool-clear" title="Clear Mask">
-                                🗑️ Clear
-                            </button>
-                        </div>
-
-                        <div class="control-slider-group">
-                            <div class="slider-header">
-                                <span>Brush Size: <span id="brush-size-val">30px</span></span>
-                            </div>
-                            <input type="range" id="brush-size" min="5" max="100" value="30" class="custom-slider">
-                        </div>
-
-                        <div class="control-slider-group">
-                            <div class="slider-header">
-                                <span>Edge Feather: <span id="feather-val">4px</span></span>
-                            </div>
-                            <input type="range" id="feather-radius" min="0" max="20" value="4" class="custom-slider">
-                        </div>
-
-                        <div class="control-slider-group" id="magic-threshold-group">
-                            <div class="slider-header">
-                                <span>Auto Sensitivity: <span id="auto-sens-val">40%</span></span>
-                            </div>
-                            <input type="range" id="auto-sens" min="10" max="90" value="40" class="custom-slider">
-                        </div>
-                        
-                        <div class="helper-box">
-                            <p>💡 <strong>Brush/Eraser:</strong> Draw directly to paint or erase the mask. Red = background.<br><br>🔷 <strong>Lasso:</strong> Click points around your subject to form a polygon. Click the <em>first point</em> (purple dot) or <strong>double-click</strong> to close &amp; commit. <strong>Shift+close</strong> to subtract. <kbd>Esc</kbd> cancels.</p>
+                <!-- Playback HUD Pill -->
+                <div class="playback-hud-pill">
+                    <div class="hud-controls-left">
+                        <button class="hud-control-btn" id="hud-rewind-btn" title="Rewind 3s">⏪</button>
+                        <button class="hud-play-btn" id="hud-play-btn">⏸️</button>
+                        <button class="hud-control-btn" id="hud-forward-btn" title="Forward 3s">⏩</button>
+                    </div>
+                    <div class="hud-timeline-center">
+                        <div class="hud-progress-bar" id="hud-progress-bar">
+                            <div class="hud-progress-fill" id="hud-progress-fill"></div>
                         </div>
                     </div>
-
-                    <div class="panel-actions double-actions">
-                        <button class="secondary-btn" id="back-to-1">Back</button>
-                        <button class="primary-btn" id="to-step-3">Customize Theme</button>
+                    <div class="hud-info-right">
+                        <span class="hud-time" id="hud-time-val">0:00 / 0:15</span>
+                        <span class="hud-slide-counter" id="hud-counter" style="display:none;">1 / 5</span>
+                        <span class="hud-tag" id="hud-style-tag" style="display:none;">Paper Cutout</span>
                     </div>
-                </section>
+                </div>
+            </div>
 
-                <!-- STEP 3: CUSTOMIZE -->
-                <section class="step-panel" id="panel-design" data-step="3">
-                    <div class="panel-header">
-                        <h2>Customize Collage</h2>
-                        <p>Switch styles, choose music, and personalize your video story.</p>
-                    </div>
-
-                    <div class="accordion-item" style="display: none;">
-                        <div class="accordion-header">
-                            <h3>Animation Style</h3>
-                        </div>
-                        <div class="accordion-content">
-                            <div class="style-grid" id="style-grid">
-                                <button class="style-card active" data-style="paper">
-                                    <div class="style-card-preview theme-paper"></div>
-                                    <span class="style-card-title">Paper Cutout</span>
-                                </button>
-                                <button class="style-card" data-style="scrapbook">
-                                    <div class="style-card-preview theme-scrapbook"></div>
-                                    <span class="style-card-title">Scrapbook</span>
-                                </button>
-                                <button class="style-card" data-style="magazine">
-                                    <div class="style-card-preview theme-magazine"></div>
-                                    <span class="style-card-title">Magazine Editorial</span>
-                                </button>
-                                <button class="style-card" data-style="polaroid">
-                                    <div class="style-card-preview theme-polaroid"></div>
-                                    <span class="style-card-title">Polaroid Stack</span>
-                                </button>
-                                <button class="style-card" data-style="depth">
-                                    <div class="style-card-preview theme-depth"></div>
-                                    <span class="style-card-title">Layered Depth</span>
-                                </button>
-                                <button class="style-card" data-style="sticker">
-                                    <div class="style-card-preview theme-sticker"></div>
-                                    <span class="style-card-title">Sticker Pop</span>
-                                </button>
-                                <button class="style-card" data-style="torn">
-                                    <div class="style-card-preview theme-torn"></div>
-                                    <span class="style-card-title">Torn Paper Reveal</span>
-                                </button>
-                                <button class="style-card" data-style="memory">
-                                    <div class="style-card-preview theme-memory"></div>
-                                    <span class="style-card-title">Memory Board</span>
-                                </button>
-                                <button class="style-card" data-style="film">
-                                    <div class="style-card-preview theme-film"></div>
-                                    <span class="style-card-title">Film Strip</span>
-                                </button>
-                                <button class="style-card" data-style="scatter">
-                                    <div class="style-card-preview theme-scatter"></div>
-                                    <span class="style-card-title">Floating Scatter</span>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="accordion-item">
-                        <div class="accordion-header">
-                            <h3>Music & Audio</h3>
-                        </div>
-                        <div class="accordion-content">
-                            <div class="music-options">
-                                <label for="music-track-select">Backing Music Track:</label>
-                                <select id="music-track-select" class="custom-select">
-                                    <option value="none">🔇 No Music</option>
-                                    <option value="lofi" selected>🎵 Lofi Dream (Chill/Nostalgic)</option>
-                                    <option value="upbeat">⚡ Future Pop (Energetic/Punchy)</option>
-                                    <option value="retro">👾 Synthwave Synth (80s Neon)</option>
-                                    <option value="custom">📁 Upload Custom Music...</option>
-                                </select>
-                                
-                                <input type="file" id="custom-audio-input" accept="audio/*" style="display:none;">
-                                
-                                <button class="primary-btn" id="btn-upload-music" style="display: none; margin-top: 8px; font-size: 12px; gap: 6px; justify-content: center; align-items: center; width: 100%; height: 36px; padding: 0 12px; border-radius: var(--radius-sm);">
-                                    📁 Select Custom Audio File
-                                </button>
-
-                                <!-- Global Music Volume Slider -->
-                                <div class="control-slider-group" id="music-volume-container" style="margin-top: 15px;">
-                                    <div class="slider-header" style="font-size: 12px;">
-                                        <span>Music Volume: <span id="music-volume-val">80%</span></span>
-                                    </div>
-                                    <input type="range" id="music-volume-slider" min="0" max="100" step="5" value="80" class="custom-slider">
+            <!-- RIGHT SIDEBAR: Step Parameters -->
+            <div class="workspace-right">
+                <div class="editor-card parameters-card">
+                    <div class="card-header">Parameters</div>
+                    <div class="card-content">
+                        <main class="step-content-container">
+                            <!-- Step 1 panel (Upload Settings) -->
+                            <section class="step-panel active" id="panel-upload" data-step="1">
+                                <div class="panel-inner-header">
+                                    <h3>Upload Settings</h3>
+                                    <p>Manage your uploaded photos. Minimum 5 photos required to generate cutouts.</p>
                                 </div>
+                                <div class="panel-actions" style="margin-top: auto;">
+                                    <button class="primary-btn wide-btn" id="to-step-2" disabled>
+                                        Process Cutouts <span class="arrow">→</span>
+                                    </button>
+                                </div>
+                            </section>
 
-                                <div id="custom-audio-editor" style="display: none; margin-top: 15px; background: rgba(0, 0, 0, 0.25); padding: 16px; border-radius: var(--radius-md); border: 1px solid var(--border-color); flex-direction: column; gap: 14px;">
-                                    <div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">
-                                        <h4 style="margin: 0; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; color: var(--primary);">🎵 Custom Audio Editor</h4>
-                                        <span id="audio-filename-badge" style="font-size: 11px; color: var(--text-muted); background: rgba(255,255,255,0.05); padding: 2px 6px; border-radius: var(--radius-sm); max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Audio Loaded</span>
-                                    </div>
-
-                                    <div class="control-slider-group" style="margin-bottom: 0;">
-                                        <div class="slider-header" style="font-size: 12px;">
-                                            <span>Start Trim: <span id="audio-start-val">0.0s</span></span>
-                                        </div>
-                                        <input type="range" id="audio-start-slider" min="0" max="100" step="0.1" value="0" class="custom-slider">
-                                    </div>
-
-                                    <div class="control-slider-group" style="margin-bottom: 0;">
-                                        <div class="slider-header" style="font-size: 12px;">
-                                            <span>End Trim: <span id="audio-end-val">0.0s</span></span>
-                                        </div>
-                                        <input type="range" id="audio-end-slider" min="0" max="100" step="0.1" value="100" class="custom-slider">
+                            <!-- Step 2 panel (Cutout Editor Settings) -->
+                            <section class="step-panel" id="panel-cutout" data-step="2">
+                                <div class="panel-inner-header">
+                                    <h3>Cutout Refinement</h3>
+                                    <p>Fine-tune mask boundaries for the selected photo.</p>
+                                </div>
+                                <div class="editor-photo-selector">
+                                    <label for="editor-photo-select">Active Image:</label>
+                                    <select id="editor-photo-select" class="custom-select"></select>
+                                </div>
+                                <div class="editor-canvas-wrapper" style="display: none;">
+                                    <canvas id="editor-canvas"></canvas>
+                                    <div class="editor-loader" id="editor-loader" style="display: none;">
+                                        <div class="spinner"></div>
+                                        <p>Extracting subject...</p>
                                     </div>
                                 </div>
+                                <div class="editor-controls">
+                                    <div class="control-row" style="grid-template-columns: repeat(4, 1fr); gap: 6px;">
+                                        <button class="editor-tool-btn active" id="tool-brush" title="Paint cutout area">✏️ Brush</button>
+                                        <button class="editor-tool-btn" id="tool-eraser" title="Erase cutout area">🧽 Erase</button>
+                                        <button class="editor-tool-btn" id="tool-magic" title="AI Magic subject detection">🪄 Magic</button>
+                                        <button class="editor-tool-btn" id="tool-clear" title="Clear mask completely">❌ Clear</button>
+                                    </div>
+                                    <div class="control-slider-group">
+                                        <div class="slider-header">
+                                            <span>Brush Size: <span id="brush-size-val">30px</span></span>
+                                        </div>
+                                        <input type="range" id="brush-size" min="5" max="100" value="30" class="custom-slider">
+                                    </div>
+                                    <div class="control-slider-group">
+                                        <div class="slider-header">
+                                            <span>Auto Saliency Threshold: <span id="auto-sens-val">40%</span></span>
+                                        </div>
+                                        <input type="range" id="auto-sens" min="10" max="90" value="40" class="custom-slider">
+                                    </div>
+                                    <!-- Feather radius hidden input to prevent JS errors -->
+                                    <input type="hidden" id="feather-radius" value="4">
+                                    <span id="feather-val" style="display:none;">4px</span>
+                                    <button class="editor-tool-btn" id="tool-lasso" style="display:none;"></button>
+                                </div>
+                                <div class="panel-actions">
+                                    <button class="secondary-btn" id="back-to-1">← Back</button>
+                                    <button class="primary-btn" id="to-step-3">Customize →</button>
+                                </div>
+                            </section>
 
-                                <div class="beat-sync-toggle-container">
-                                    <label class="switch-container">
+                            <!-- Step 3 panel (Customize Settings) -->
+                            <section class="step-panel" id="panel-design" data-step="3">
+                                <div class="panel-inner-header">
+                                    <h3>Video Styling</h3>
+                                    <p>Configure transitions, text captioning, and background tracks.</p>
+                                </div>
+                                
+                                <div class="settings-form">
+                                    <div class="info-tooltip-box" id="timing-info-box" style="display: none;">
+                                        <button id="timing-info-close">✕</button>
+                                        <strong id="timing-info-title">Timing Guide</strong>
+                                        <p id="timing-info-desc"></p>
+                                    </div>
+
+                                    <div class="control-slider-group">
+                                        <div class="slider-header">
+                                            <span>Slide Duration: <span id="slide-dur-val">1.5s</span></span>
+                                            <button class="info-btn-timing" id="info-btn-duration" title="How Slide Duration works">ℹ️</button>
+                                        </div>
+                                        <input type="range" id="slide-duration" min="0.5" max="6.0" step="0.5" value="1.5" class="custom-slider">
+                                        
+                                        <div class="speed-sync-options" style="margin-top: 10px; display: flex; gap: 8px; align-items: center;">
+                                            <span style="font-size: 11px; text-transform: uppercase; color: var(--text-mid);">Sync Mode:</span>
+                                            <div class="segmented-control" style="display: flex; flex: 1;">
+                                                <button type="button" id="speed-mode-manual" class="segment-btn active">Manual</button>
+                                                <button type="button" id="speed-mode-auto" class="segment-btn">⚡ Auto Sync</button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="control-slider-group">
+                                        <div class="slider-header">
+                                            <span>Cutout Hold Duration: <span id="cutout-hold-val">35%</span></span>
+                                            <button class="info-btn-timing" id="info-btn-hold" title="How Cutout Hold Duration works">ℹ️</button>
+                                        </div>
+                                        <input type="range" id="cutout-hold" min="10" max="80" step="5" value="35" class="custom-slider">
+                                    </div>
+
+                                    <!-- Easing Curve Visualizer Card -->
+                                    <div class="transition-curve-card">
+                                        <div class="curve-header">
+                                            <span>Ease In Out Transition</span>
+                                            <span class="curve-subtitle">Collage Easing Curve</span>
+                                        </div>
+                                        <div class="curve-canvas-wrapper">
+                                            <canvas id="bezier-curve-canvas" width="260" height="120"></canvas>
+                                        </div>
+                                    </div>
+
+                                    <div class="control-slider-group">
+                                        <label for="video-aspect-ratio">Video Aspect Ratio:</label>
+                                        <select id="video-aspect-ratio" class="custom-select">
+                                            <option value="9-16" selected>📱 Vertical / Reels (9:16)</option>
+                                            <option value="16-9">🖥️ Landscape / YouTube (16:9)</option>
+                                            <option value="1-1">⏹️ Square / Post (1:1)</option>
+                                            <option value="4-5">📸 Portrait / Instagram (4:5)</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="control-slider-group">
+                                        <label for="caption-font-select">Caption Font:</label>
+                                        <select id="caption-font-select" class="custom-select">
+                                            <option value="playfair" selected>🏛️ Playfair Display (Classic Serif)</option>
+                                            <option value="satisfy">✍️ Satisfy (Handwritten Cursive)</option>
+                                            <option value="outfit">📐 Outfit (Clean Modern)</option>
+                                            <option value="space">💻 Space Grotesk (Tech Monospace)</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="control-slider-group">
+                                        <label for="music-track-select">Backing Music Track:</label>
+                                        <select id="music-track-select" class="custom-select">
+                                            <option value="desi_boyz" selected>🎵 Subha Hone Na De (Desi Boyz)</option>
+                                            <option value="lofi">🎵 Lofi Dream (Synth Beat)</option>
+                                            <option value="custom">📁 Custom Audio File</option>
+                                            <option value="none">🔇 No Audio</option>
+                                        </select>
+                                        <button class="secondary-btn" id="btn-upload-music" style="display: none; margin-top: 8px;">📁 Select Custom Audio File</button>
+                                        <input type="file" id="custom-audio-input" accept="audio/*" class="file-input" style="display: none;">
+                                    </div>
+
+                                    <!-- Custom Audio Trim Panel -->
+                                    <div class="custom-audio-editor-panel" id="custom-audio-editor" style="display: none;">
+                                        <div class="audio-badge-row">
+                                            <span class="audio-badge" id="audio-filename-badge">Selected song</span>
+                                        </div>
+                                        <div class="control-slider-group" id="music-volume-container">
+                                            <div class="slider-header">
+                                                <span>Volume: <span id="music-volume-val">80%</span></span>
+                                            </div>
+                                            <input type="range" id="music-volume-slider" min="0" max="100" value="80" class="custom-slider">
+                                        </div>
+                                        <div class="control-slider-group">
+                                            <div class="slider-header">
+                                                <span>Trim Start: <span id="audio-start-val">0.0s</span></span>
+                                            </div>
+                                            <input type="range" id="audio-start-slider" min="0" max="100" value="0" class="custom-slider">
+                                        </div>
+                                        <div class="control-slider-group">
+                                            <div class="slider-header">
+                                                <span>Trim End: <span id="audio-end-val">15.0s</span></span>
+                                            </div>
+                                            <input type="range" id="audio-end-slider" min="0" max="100" value="15" class="custom-slider">
+                                        </div>
+                                    </div>
+
+                                    <!-- Hidden styling selections to keep JS from failing -->
+                                    <div style="display: none;">
+                                        <select id="cutout-border-type"><option value="none" selected>No Border</option></select>
+                                        <select id="bg-style"><option value="dark" selected>Cozy Dark</option></select>
                                         <input type="checkbox" id="beat-sync" checked>
-                                        <span class="switch-slider"></span>
-                                    </label>
-                                    <span class="switch-label">Sync Animation to Beat (Bounce/Flash)</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="accordion-item">
-                        <div class="accordion-header">
-                            <h3>Settings & Captions</h3>
-                        </div>
-                        <div class="accordion-content">
-                            <div class="settings-form">
-                                <!-- Interactive Timing Help Banner -->
-                                <div class="info-tooltip-box" id="timing-info-box" style="display: none; background: rgba(157, 78, 221, 0.12); border: 1px solid rgba(157, 78, 221, 0.25); padding: 12px; border-radius: var(--radius-md); font-size: 12px; line-height: 1.45; color: var(--text-main); margin-bottom: 16px; flex-direction: column; gap: 4px; animation: fadeIn 0.25s ease-out; position: relative;">
-                                    <button id="timing-info-close" style="position: absolute; top: 8px; right: 8px; background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 10px; padding: 2px;">✕</button>
-                                    <strong id="timing-info-title" style="color: #c77dff; font-size: 13px; font-weight: 700; margin-right: 15px;">Timing Guide</strong>
-                                    <p id="timing-info-desc" style="color: var(--text-muted); margin: 0;"></p>
-                                </div>
-
-                                <div class="control-slider-group">
-                                    <div class="slider-header">
-                                        <span>Slide Duration: <span id="slide-dur-val">1.5s</span></span>
-                                        <button class="info-btn-timing" id="info-btn-duration" title="How Slide Duration works" style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 13px; padding: 0 4px; transition: var(--transition);">ℹ️</button>
+                                        <div class="style-card active" data-style="clean"></div>
                                     </div>
-                                    <input type="range" id="slide-duration" min="0.5" max="6.0" step="0.5" value="1.5" class="custom-slider">
+
+                                    <div class="text-captions-section">
+                                        <h4>Customize Captions</h4>
+                                        <div id="captions-container" class="captions-list"></div>
+                                    </div>
+                                </div>
+
+                                <div class="panel-actions">
+                                    <button class="secondary-btn" id="back-to-2">← Back</button>
+                                    <button class="primary-btn" id="to-step-4">Export →</button>
+                                </div>
+                            </section>
+
+                            <!-- Step 4 panel (Export Settings) -->
+                            <section class="step-panel" id="panel-export" data-step="4">
+                                <div class="panel-inner-header">
+                                    <h3>Render Settings</h3>
+                                    <p>Render your cutout collage into a high-quality video clip.</p>
+                                </div>
+                                
+                                <div class="settings-form">
+                                    <div class="control-slider-group">
+                                        <label for="export-resolution">Resolution:</label>
+                                        <select id="export-resolution" class="custom-select">
+                                            <option value="1080" selected>1080p Full HD (Highest Quality)</option>
+                                            <option value="720">720p HD (Fast Render)</option>
+                                        </select>
+                                    </div>
+                                    <div class="control-slider-group">
+                                        <label for="export-format">Format:</label>
+                                        <select id="export-format" class="custom-select">
+                                            <option value="mp4" selected>MP4 (Highest Compatibility)</option>
+                                        </select>
+                                    </div>
                                     
-                                    <!-- Auto Speed Sync Segmented Control -->
-                                    <div class="speed-sync-options" style="margin-top: 10px; display: flex; gap: 8px; align-items: center;">
-                                        <span style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Sync Mode:</span>
-                                        <div class="segmented-control" style="display: flex; background: rgba(0, 0, 0, 0.2); padding: 2px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); flex: 1;">
-                                            <button type="button" id="speed-mode-manual" class="segment-btn active">Manual</button>
-                                            <button type="button" id="speed-mode-auto" class="segment-btn">⚡ Auto Beat Sync</button>
+                                    <div class="export-progress-container" id="export-progress-area" style="display: none;">
+                                        <div class="export-progress-header">
+                                            <span id="export-status-text">Rendering Video...</span>
+                                            <span id="export-percent">0%</span>
+                                        </div>
+                                        <div class="export-progress-bar-track">
+                                            <div class="export-progress-bar-fill" id="export-progress-bar"></div>
                                         </div>
                                     </div>
                                 </div>
 
-                                <div class="control-slider-group">
-                                    <div class="slider-header">
-                                        <span>Cutout Hold Duration: <span id="cutout-hold-val">35%</span></span>
-                                        <button class="info-btn-timing" id="info-btn-hold" title="How Cutout Hold Duration works" style="background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 13px; padding: 0 4px; transition: var(--transition);">ℹ️</button>
-                                    </div>
-                                    <input type="range" id="cutout-hold" min="10" max="80" step="5" value="35" class="custom-slider">
+                                <div class="panel-actions" style="flex-direction: column; gap: 8px;">
+                                    <button class="primary-btn wide-btn" id="btn-start-export">🎬 Start Render</button>
+                                    <button class="secondary-btn wide-btn" id="btn-cancel-export" style="display: none;">✕ Cancel Render</button>
+                                    <a id="btn-download-video" class="primary-btn wide-btn success-btn" style="display: none; text-align: center; text-decoration: none;">⬇️ Download Video</a>
+                                    <button class="secondary-btn wide-btn" id="back-to-3">← Back</button>
                                 </div>
+                            </section>
+                        </main>
+                    </div>
+                </div>
+            </div> <!-- workspace-right -->
+        </div> <!-- workspace-top-row -->
 
-                                <div class="control-slider-group">
-                                    <label for="video-aspect-ratio" style="font-size: 12px; font-weight: 700; margin-bottom: 6px; display: block; color: var(--text-main);">Video Aspect Ratio:</label>
-                                    <select id="video-aspect-ratio" class="custom-select">
-                                        <option value="9-16" selected>📱 Vertical / Reels (9:16)</option>
-                                        <option value="16-9">🖥️ Landscape / YouTube (16:9)</option>
-                                        <option value="1-1">⏹️ Square / Post (1:1)</option>
-                                        <option value="4-5">📸 Portrait / Instagram (4:5)</option>
-                                    </select>
+                <!-- BOTTOM SECTION: Multi-Track Timeline -->
+                <section class="app-timeline-section">
+                    <div class="timeline-card">
+                        <div class="timeline-header-bar">
+                            <span>Timeline Editor</span>
+                            <span class="timeline-zoom-tip">💡 Drag and drop photos on Step 1 to rearrange tracks</span>
+                        </div>
+                        <div class="timeline-tracks-container">
+                            <!-- Playhead Line -->
+                            <div class="timeline-playhead" id="timeline-playhead"></div>
+                            
+                            <!-- Track 1: Video Track -->
+                            <div class="timeline-track-row video-track">
+                                <div class="track-info">
+                                    <span class="track-icon">📸</span>
+                                    <span class="track-name">Video Track</span>
                                 </div>
+                                <div class="track-timeline" id="timeline-video-cells">
+                                    <!-- Populated dynamically to mirror slide thumbnails in sequence -->
+                                </div>
+                            </div>
 
-                                <div class="control-row-grid" style="display: none;">
-                                    <div class="input-group">
-                                        <label for="cutout-border-type">Cutout Border:</label>
-                                        <select id="cutout-border-type" class="custom-select">
-                                            <option value="torn">Torn Paper</option>
-                                            <option value="solid">Thick Solid</option>
-                                            <option value="dashed">Dashed Line</option>
-                                            <option value="none" selected>No Border</option>
-                                        </select>
-                                    </div>
-                                    <div class="input-group">
-                                        <label for="bg-style">Background Palette:</label>
-                                        <select id="bg-style" class="custom-select">
-                                            <option value="pastel">Soft Pastels</option>
-                                            <option value="dark" selected>Cozy Dark</option>
-                                            <option value="kraft">Kraft Paper</option>
-                                            <option value="neon">Neon Vibe</option>
-                                        </select>
-                                    </div>
-                                </div>
-
-                                <div class="text-captions-section">
-                                    <h4>Customize Captions</h4>
-                                    <div id="captions-container" class="captions-list">
-                                        <!-- Caption editors generated here dynamically -->
-                                    </div>
-                                </div>
+                    <!-- Track 2: Audio Track -->
+                    <div class="timeline-track-row audio-track">
+                        <div class="track-info">
+                            <span class="track-icon">🎵</span>
+                            <span class="track-name">Audio Track</span>
+                        </div>
+                        <div class="track-timeline">
+                            <div class="timeline-audio-segment" id="timeline-audio-segment">
+                                🎵 Lofi Dream (15.0s)
                             </div>
                         </div>
                     </div>
 
-                    <div class="panel-actions double-actions">
-                        <button class="secondary-btn" id="back-to-2">Back</button>
-                        <button class="primary-btn" id="to-step-4">Go to Export</button>
-                    </div>
-                </section>
-
-                <!-- STEP 4: EXPORT -->
-                <section class="step-panel" id="panel-export" data-step="4">
-                    <div class="panel-header">
-                        <h2>Export Collage Video</h2>
-                        <p>Render and download your final vertical MP4/WebM video.</p>
-                    </div>
-
-                    <div class="export-settings-box">
-                        <div class="input-group">
-                            <label for="export-resolution">Resolution:</label>
-                            <select id="export-resolution" class="custom-select">
-                                <option value="1080" selected>1080p Full HD (1080x1920, Highest Quality)</option>
-                                <option value="720">720p HD (720x1280, Faster Render)</option>
-                            </select>
+                    <!-- Track 3: Captions Track -->
+                    <div class="timeline-track-row text-track">
+                        <div class="track-info">
+                            <span class="track-icon">💬</span>
+                            <span class="track-name">Captions</span>
                         </div>
-                        <div class="input-group">
-                            <label for="export-format">Format:</label>
-                            <select id="export-format" class="custom-select">
-                                <option value="mp4" selected>MP4 (Highest Compatibility, QuickTime/Reels)</option>
-                                <option value="auto">WebM (Fast Render, High Quality)</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div class="export-progress-container" id="export-progress-area" style="display: none;">
-                        <div class="progress-bar-track">
-                            <div class="progress-bar-fill" id="export-progress-bar" style="width: 0%;"></div>
-                        </div>
-                        <div class="progress-stats">
-                            <span id="export-status-text">Ready to render...</span>
-                            <span id="export-percent">0%</span>
-                        </div>
-                    </div>
-
-                    <div class="panel-actions export-actions">
-                        <button class="primary-btn wide-btn" id="btn-start-export">
-                            🚀 Start Rendering Video
-                        </button>
-                        <button class="secondary-btn wide-btn" id="btn-cancel-export" style="display: none;">
-                            🛑 Cancel Rendering
-                        </button>
-                        <a href="#" class="primary-btn wide-btn success-btn" id="btn-download-video" style="display: none;" download="scrapbook_collage.webm">
-                            📥 Download Video
-                        </a>
-                        <button class="secondary-btn wide-btn" id="back-to-3">Back to Edit</button>
-                    </div>
-                </section>
-            </main>
-        </aside>
-
-        <!-- Preview Player Area -->
-        <section class="preview-area">
-            <div class="player-container">
-                <!-- Phone Frame mockup for aesthetic vertical video layout -->
-                <div class="phone-frame">
-                    <div class="phone-camera"></div>
-                    <div class="phone-screen">
-                        <!-- Main Canvas for Playback and Recording -->
-                        <canvas id="preview-canvas" width="540" height="960"></canvas>
-                        
-                        <!-- Ambient visualizer showing active sound wave -->
-                        <div class="ambient-music-indicator" id="music-indicator" style="display: none;">
-                            <div class="bar"></div>
-                            <div class="bar"></div>
-                            <div class="bar"></div>
-                            <div class="bar"></div>
-                        </div>
-                        
-                        <!-- Floating controls inside screen -->
-                        <div class="player-hud">
-                            <div class="hud-top">
-                                <span class="hud-tag" id="hud-style-tag" style="display: none;">Paper Cutout</span>
-                                <span class="hud-slide-counter" id="hud-counter">1 / 5</span>
-                            </div>
-                            <div class="hud-bottom">
-                                <div class="hud-progress-bar" id="hud-progress-bar" style="cursor: pointer; height: 6px; background: rgba(255,255,255,0.2); border-radius: 3px; position: relative;">
-                                    <div class="hud-progress-fill" id="hud-progress-fill" style="width: 0%; height: 100%; background: var(--primary); border-radius: 3px; transition: width 0.05s linear;"></div>
-                                </div>
-                                <div class="hud-controls" style="display: flex; align-items: center; gap: 10px;">
-                                    <button class="hud-control-btn" id="hud-rewind-btn" title="Rewind 3 seconds" style="background: none; border: none; font-size: 16px; cursor: pointer; padding: 4px 8px; color: white;">⏪</button>
-                                    <button class="hud-play-btn" id="hud-play-btn" style="background: none; border: none; font-size: 18px; cursor: pointer; padding: 4px 8px;">⏸️</button>
-                                    <button class="hud-control-btn" id="hud-forward-btn" title="Forward 3 seconds" style="background: none; border: none; font-size: 16px; cursor: pointer; padding: 4px 8px; color: white;">⏩</button>
-                                    <span class="hud-time" id="hud-time-val" style="margin-left: auto;">0:00 / 0:15</span>
-                                </div>
-                            </div>
+                        <div class="track-timeline" id="timeline-text-cells">
+                            <!-- Populated dynamically with text bubbles -->
                         </div>
                     </div>
                 </div>
             </div>
         </section>
+
+        </div> <!-- workspace-main-content -->
+    </div> <!-- workspace-grid -->
+
+        <!-- App Bottom Footer Bar -->
+        <footer class="app-footer-bottom">
+            <div class="footer-left">Eloquent</div>
+            <div class="footer-right">2024</div>
+        </footer>
     </div>
 
     <!-- Image Preview Modal -->
@@ -488,7 +456,7 @@
             <!-- Editor Controls (Visible when AI Cutout tab is active) -->
             <div id="preview-modal-editor-controls" style="display: none; margin-top: 12px; flex-direction: column; gap: 8px; border-top: 1px solid var(--border-color); padding-top: 12px;">
                 <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">
-                    <span style="font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--primary);">✏️ Manual Cutout Editor</span>
+                    <span style="font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--accent);">✏️ Manual Cutout Editor</span>
                     <span id="prev-brush-tool-indicator" style="font-size: 11px; color: var(--text-muted);">Mode: Brush (Reveal)</span>
                 </div>
                 <div class="control-row" style="grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 4px;">
@@ -508,7 +476,7 @@
             <!-- Crop Controls (Visible when Crop tab is active) -->
             <div id="preview-modal-crop-controls" style="display: none; margin-top: 12px; flex-direction: column; gap: 8px; border-top: 1px solid var(--border-color); padding-top: 12px;">
                 <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">
-                    <span style="font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--primary);">📐 Crop Photo</span>
+                    <span style="font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--accent);">📐 Crop Photo</span>
                     <button class="primary-btn" id="btn-prev-crop-apply" style="font-size: 11px; padding: 4px 10px; height: auto;">Apply Crop</button>
                 </div>
                 <div class="control-row" style="grid-template-columns: repeat(5, 1fr); gap: 4px; margin-bottom: 4px;">
@@ -530,6 +498,6 @@
     </div>
 
     <!-- JavaScript Files (ES Module structure) -->
-    <script type="module" src="app.js?v=8"></script>
+    <script type="module" src="app.js?v=17"></script>
 </body>
 </html>

@@ -104,7 +104,7 @@ export class AudioEngine {
         this.nextNoteTime = this.ctx.currentTime + 0.05;
         this.beatDuration = 60 / this.bpm;
         
-        if (this.activeTheme === 'custom' && this.customAudioBuffer) {
+        if ((this.activeTheme === 'custom' || this.activeTheme === 'desi_boyz') && this.customAudioBuffer) {
             // Play custom audio buffer & start beat sync loop
             this.playCustomBuffer();
         } else if (this.activeTheme !== 'none') {
@@ -316,7 +316,7 @@ export class AudioEngine {
     }
 
     playCustomBuffer() {
-        if (!this.isPlaying || this.activeTheme !== 'custom' || !this.customAudioBuffer || !this.ctx) return;
+        if (!this.isPlaying || (this.activeTheme !== 'custom' && this.activeTheme !== 'desi_boyz') || !this.customAudioBuffer || !this.ctx) return;
         
         if (this.customAudioSource) {
             try {
@@ -352,7 +352,7 @@ export class AudioEngine {
         
         this.lastBeatTime = this.ctx.currentTime;
         const triggerBeat = () => {
-            if (!this.isPlaying || this.activeTheme !== 'custom' || !this.ctx) return;
+            if (!this.isPlaying || (this.activeTheme !== 'custom' && this.activeTheme !== 'desi_boyz') || !this.ctx) return;
             const now = this.ctx.currentTime;
             this.lastBeatTime = now;
             if (this.onBeatCallback) {

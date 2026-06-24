@@ -205,10 +205,10 @@ export class CollageRenderer {
         this.ctx.fillRect(20, 20, w - 40, h - 40);
         
         this.ctx.fillStyle = '#a5a5b5';
-        this.ctx.font = '700 18px Outfit';
+        this.ctx.font = '700 18px "Space Grotesk"';
         this.ctx.textAlign = 'center';
         this.ctx.fillText('✨ No Photos Uploaded Yet ✨', w / 2, h / 2 - 10);
-        this.ctx.font = '400 13px Outfit';
+        this.ctx.font = '400 13px "Space Grotesk"';
         this.ctx.fillText('Upload 5-20 photos in Step 1 to begin', w / 2, h / 2 + 20);
     }
 
@@ -292,10 +292,24 @@ export class CollageRenderer {
         if (slide.text) {
             this.ctx.save();
             this.ctx.fillStyle = '#ffffff';
-            this.ctx.font = '500 20px Outfit, sans-serif';
-            this.ctx.textAlign = 'center';
             this.ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
             this.ctx.shadowBlur = 6;
+            
+            // Map the selected caption font setting to canvas font values
+            let fontStr = '700 20px "Space Grotesk", sans-serif';
+            const f = this.captionFont || 'playfair';
+            if (f === 'playfair') {
+                fontStr = 'italic 700 24px "Playfair Display", serif';
+            } else if (f === 'satisfy') {
+                fontStr = '400 28px "Satisfy", cursive';
+            } else if (f === 'outfit') {
+                fontStr = '600 22px "Outfit", sans-serif';
+            } else if (f === 'space') {
+                fontStr = '700 20px "Space Grotesk", sans-serif';
+            }
+            
+            this.ctx.font = fontStr;
+            this.ctx.textAlign = 'center';
             this.ctx.fillText(slide.text, w / 2, h - 80);
             this.ctx.restore();
         }
