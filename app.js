@@ -126,6 +126,8 @@ const DOM = {
     captionsContainer: document.getElementById('captions-container'),
     toStep4: document.getElementById('to-step-4'),
     backTo2: document.getElementById('back-to-2'),
+    btnRotateRandom: document.getElementById('btn-rotate-random'),
+    btnRotateReset: document.getElementById('btn-rotate-reset'),
     
     // Step 4: Export
     exportResolution: document.getElementById('export-resolution'),
@@ -821,13 +823,14 @@ async function createNewProject() {
             bgPalette: 'dark',
             slideDuration: 1.5,
             beatSync: true,
-            musicTheme: 'lofi',
+            musicTheme: 'desi_boyz',
             musicVolume: 0.8,
             cutoutHoldRatio: 0.35,
             customAudioStart: 0.0,
             customAudioEnd: null,
             speedMode: 'manual',
-            videoRatio: '9-16'
+            videoRatio: '9-16',
+            captionFont: 'playfair'
         }
     };
     await saveProject(newProject);
@@ -840,11 +843,18 @@ async function createNewProject() {
     state.customAudioEnd = null;
     state.speedMode = 'manual';
     state.videoRatio = '9-16';
+    state.captionFont = 'playfair';
+    state.musicTheme = 'desi_boyz';
+    
+    if (DOM.musicSelect) {
+        DOM.musicSelect.value = 'desi_boyz';
+    }
     
     if (renderer) renderer.setSlides([]);
     onPhotosUpdated();
 
     loadMockImages();
+    loadPredefinedSong();
 
     await refreshProjectList();
     goToStep(1);
@@ -1499,6 +1509,35 @@ function setupEventListeners() {
             state.videoRatio = e.target.value;
             updateVideoAspectRatio();
             triggerAutosave();
+        });
+    }
+
+    if (DOM.btnRotateRandom) {
+        DOM.btnRotateRandom.addEventListener('click', () => {
+            if (state.slides.length === 0) return;
+            state.slides.forEach(slide => {
+                // Random tilt between -10 and +10 degrees in radians
+                slide.rotation = (Math.random() - 0.5) * (20 * Math.PI / 180);
+            });
+            triggerAutosave();
+            if (renderer) {
+                renderer.draw(state.playTime);
+            }
+            showToast("🎲 Randomly scattered all photos!", "success");
+        });
+    }
+
+    if (DOM.btnRotateReset) {
+        DOM.btnRotateReset.addEventListener('click', () => {
+            if (state.slides.length === 0) return;
+            state.slides.forEach(slide => {
+                slide.rotation = 0;
+            });
+            triggerAutosave();
+            if (renderer) {
+                renderer.draw(state.playTime);
+            }
+            showToast("📐 Aligned all photos straight (0°)", "success");
         });
     }
 
