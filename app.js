@@ -268,7 +268,9 @@ const DOM = {
     btnUploadPoster: document.getElementById('btn-upload-poster'),
     posterPreviewImg: document.getElementById('poster-preview-img'),
     posterPreviewPlaceholder: document.getElementById('poster-preview-placeholder'),
-    gptAutoDownloadZip: document.getElementById('gpt-auto-download-zip')
+    gptAutoDownloadZip: document.getElementById('gpt-auto-download-zip'),
+    renderedVideoPreviewWrapper: document.getElementById('rendered-video-preview-wrapper'),
+    renderedVideoPlayer: document.getElementById('rendered-video-player')
 };
 
 // Canvas context for manual cutout editor
@@ -745,6 +747,11 @@ async function loadProject(projectId) {
     }
 
     state.activeProjectId = projectId;
+    state.isPlaying = false;
+    state.playTime = 0;
+    if (renderer) {
+        renderer.isPlaying = false;
+    }
 
     if (project.settings) {
         state.style = project.settings.style || 'clean';
@@ -2998,6 +3005,10 @@ function togglePlayback() {
     if (state.slides.length === 0) return;
     
     state.isPlaying = !state.isPlaying;
+    if (renderer) {
+        renderer.isPlaying = state.isPlaying;
+        renderer.draw(state.playTime);
+    }
     
     if (state.isPlaying) {
         DOM.hudPlayBtn.innerHTML = '<i data-lucide="pause" style="width:16px;height:16px;"></i>';
@@ -3117,6 +3128,13 @@ async function startExportingVideo() {
     DOM.btnStartExport.style.display = 'none';
     DOM.btnCancelExport.style.display = 'block';
     DOM.btnDownloadVideo.style.display = 'none';
+    if (DOM.renderedVideoPreviewWrapper) {
+        DOM.renderedVideoPreviewWrapper.style.display = 'none';
+    }
+    if (DOM.renderedVideoPlayer) {
+        DOM.renderedVideoPlayer.src = '';
+        DOM.renderedVideoPlayer.load();
+    }
     DOM.backTo3.disabled = true;
     DOM.exportStatusText.textContent = "Initializing recording...";
     DOM.exportProgressBar.style.width = '0%';
@@ -3320,6 +3338,20 @@ async function startExportingVideo() {
             DOM.btnDownloadVideo.href = videoURL;
             DOM.btnDownloadVideo.download = `scrapbook_collage_${Date.now()}.mp4`; // Always download standard .mp4
             DOM.btnDownloadVideo.style.display = 'flex';
+            
+            if (DOM.renderedVideoPlayer) {
+                DOM.renderedVideoPlayer.src = videoURL;
+                if (state.thumbnailDataUrl) {
+                    DOM.renderedVideoPlayer.setAttribute('poster', state.thumbnailDataUrl);
+                } else {
+                    DOM.renderedVideoPlayer.removeAttribute('poster');
+                }
+                DOM.renderedVideoPlayer.load();
+            }
+            if (DOM.renderedVideoPreviewWrapper) {
+                DOM.renderedVideoPreviewWrapper.style.display = 'block';
+            }
+            
             DOM.exportStatusText.textContent = "Video ready!";
             finishExportingState();
         })
@@ -3328,6 +3360,16 @@ async function startExportingVideo() {
             DOM.btnDownloadVideo.href = fallbackURL;
             DOM.btnDownloadVideo.download = `scrapbook_collage_${Date.now()}${fileExtension}`;
             DOM.btnDownloadVideo.style.display = 'flex';
+            
+            if (DOM.renderedVideoPlayer) {
+                DOM.renderedVideoPlayer.src = fallbackURL;
+                DOM.renderedVideoPlayer.removeAttribute('poster');
+                DOM.renderedVideoPlayer.load();
+            }
+            if (DOM.renderedVideoPreviewWrapper) {
+                DOM.renderedVideoPreviewWrapper.style.display = 'block';
+            }
+            
             DOM.exportStatusText.textContent = "Video ready (raw fallback)";
             finishExportingState();
         });
@@ -4022,12 +4064,31 @@ function updatePosterPreviewUI() {
         if (DOM.posterPreviewPlaceholder) {
             DOM.posterPreviewPlaceholder.style.display = 'none';
         }
+        
+        // Load Image object for the canvas renderer
+        if (renderer) {
+            const img = new Image();
+            img.onload = () => {
+                renderer.thumbnailImage = img;
+                // Trigger a draw if the playhead is at 0 and not playing
+                if (!state.isPlaying && state.playTime === 0) {
+                    renderer.draw(state.playTime);
+                }
+            };
+            img.src = state.thumbnailDataUrl;
+        }
     } else {
         if (DOM.posterPreviewImg) {
             DOM.posterPreviewImg.style.display = 'none';
         }
         if (DOM.posterPreviewPlaceholder) {
             DOM.posterPreviewPlaceholder.style.display = 'flex';
+        }
+        if (renderer) {
+            renderer.thumbnailImage = null;
+            if (!state.isPlaying && state.playTime === 0) {
+                renderer.draw(state.playTime);
+            }
         }
     }
 }

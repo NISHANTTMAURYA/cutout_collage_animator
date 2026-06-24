@@ -20,6 +20,10 @@ export class CollageRenderer {
         // Beat trigger pulse (decays over time)
         this.beatPulse = 0.0;
         
+        // Playback state and custom cover/thumbnail
+        this.isPlaying = false;
+        this.thumbnailImage = null;
+        
         // Procedural texture canvases
         this.textures = {
             paper: null,
@@ -178,6 +182,12 @@ export class CollageRenderer {
             return;
         }
 
+        // Render custom cover/thumbnail if uploaded and playhead is at the beginning or stopped
+        if (this.thumbnailImage && !this.isPlaying && (t < 0.05 || t === 0)) {
+            this.drawThumbnail();
+            return;
+        }
+
         const totalDuration = this.slides.length * this.slideDuration;
         const time = ((t % totalDuration) + totalDuration) % totalDuration;
         
@@ -192,6 +202,29 @@ export class CollageRenderer {
         
         this.ctx.save();
         this.drawCleanSlide(slide, prevSlide, localTime, slideIdx, t);
+        this.ctx.restore();
+    }
+
+    drawThumbnail() {
+        if (!this.thumbnailImage) return;
+        const w = this.canvas.width;
+        const h = this.canvas.height;
+        
+        // Clear canvas
+        this.ctx.fillStyle = '#000000';
+        this.ctx.fillRect(0, 0, w, h);
+        
+        const aspect = this.thumbnailImage.naturalWidth / this.thumbnailImage.naturalHeight;
+        let destW = w;
+        let destH = w / aspect;
+        if (destH > h) {
+            destH = h;
+            destW = destH * aspect;
+        }
+        
+        this.ctx.save();
+        this.ctx.translate(w / 2, h / 2);
+        this.ctx.drawImage(this.thumbnailImage, -destW / 2, -destH / 2, destW, destH);
         this.ctx.restore();
     }
 

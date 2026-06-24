@@ -385,6 +385,9 @@
                                 <div class="panel-actions" style="flex-direction: column; gap: 8px;">
                                     <button class="primary-btn wide-btn" id="btn-start-export" style="display: flex; align-items: center; justify-content: center; gap: 6px;"><i data-lucide="play" style="width: 13px; height: 13px;"></i>Start Render</button>
                                     <button class="secondary-btn wide-btn" id="btn-cancel-export" style="display: none; align-items: center; justify-content: center; gap: 6px;"><i data-lucide="x" style="width: 13px; height: 13px;"></i>Cancel Render</button>
+                                    <div id="rendered-video-preview-wrapper" style="display: none; width: 100%; border-radius: var(--r-xs); overflow: hidden; border: 1px solid var(--border-md); background: #000; aspect-ratio: 9/16; margin-bottom: 8px;">
+                                        <video id="rendered-video-player" controls style="width: 100%; height: 100%; object-fit: contain;"></video>
+                                    </div>
                                     <a id="btn-download-video" class="primary-btn wide-btn success-btn" style="display: none; align-items: center; justify-content: center; gap: 6px; text-decoration: none;"><i data-lucide="download" style="width: 13px; height: 13px;"></i>Download Video</a>
                                     <button class="secondary-btn wide-btn" id="back-to-3">← Back</button>
                                 </div>
