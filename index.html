@@ -340,17 +340,19 @@
                                 </div>
                                 
                                 <div class="settings-form">
-                                    <!-- Video Cover / Thumbnail -->
+                                    <!-- AI Poster & Collage Designer -->
                                     <div class="control-slider-group" style="margin-bottom: 20px;">
-                                        <label>Video Cover / Thumbnail:</label>
+                                        <label>AI Poster & Collage Designer:</label>
                                         <div style="display: flex; gap: 12px; align-items: center; margin-top: 6px;">
-                                            <div id="thumbnail-preview-box" style="width: 70px; height: 95px; border: 1px solid var(--border-md); border-radius: var(--r-xs); overflow: hidden; background: var(--bg-preview); display: flex; align-items: center; justify-content: center; font-size: 10px; color: var(--text-lo); position: relative; flex-shrink: 0; box-shadow: var(--card-shadow);">
-                                                <span id="thumbnail-preview-placeholder" style="text-align: center; padding: 4px; line-height: 1.2;">No Cover</span>
-                                                <img id="thumbnail-preview-img" style="width: 100%; height: 100%; object-fit: cover; display: none;">
+                                            <div id="poster-preview-box" style="width: 70px; height: 95px; border: 1px solid var(--border-md); border-radius: var(--r-xs); overflow: hidden; background: var(--bg-preview); display: flex; align-items: center; justify-content: center; font-size: 10px; color: var(--text-lo); position: relative; flex-shrink: 0; box-shadow: var(--card-shadow);">
+                                                <span id="poster-preview-placeholder" style="text-align: center; padding: 4px; line-height: 1.2; display: flex; flex-direction: column; align-items: center; gap: 4px;"><i data-lucide="sparkles" style="width: 16px; height: 16px; color: var(--accent);"></i>GPT Prompt</span>
+                                                <img id="poster-preview-img" style="width: 100%; height: 100%; object-fit: cover; display: none;" alt="Uploaded Poster">
                                             </div>
                                             <div style="flex: 1; display: flex; flex-direction: column; gap: 6px;">
-                                                <button type="button" class="primary-btn" id="btn-open-thumbnail-designer" style="font-size: 11px; padding: 6px 12px; height: auto; border-radius: var(--r-xs); display: inline-flex; align-items: center; gap: 4px;"><i data-lucide="palette" style="width:12px;height:12px;"></i> Design Cover Art</button>
-                                                <span style="font-size: 9.5px; color: var(--text-mid); line-height: 1.3;">Designed cover art will be embedded directly inside your exported video clip.</span>
+                                                <button type="button" class="primary-btn" id="btn-open-gpt-modal" style="font-size: 11px; padding: 6px 12px; height: auto; border-radius: var(--r-xs); display: inline-flex; align-items: center; gap: 4px;"><i data-lucide="sparkles" style="width:12px;height:12px;"></i> Get GPT Poster Prompt</button>
+                                                <button type="button" class="secondary-btn" id="btn-upload-poster" style="font-size: 11px; padding: 6px 12px; height: auto; border-radius: var(--r-xs); display: inline-flex; align-items: center; gap: 4px;"><i data-lucide="upload" style="width:12px;height:12px;"></i> Upload GPT Cover</button>
+                                                <input type="file" id="poster-upload-input" accept="image/*" style="display: none;">
+                                                <span style="font-size: 9.5px; color: var(--text-mid); line-height: 1.3;">1. Open prompt and download ZIP.<br>2. Generate in GPT.<br>3. Upload here to embed as cover.</span>
                                             </div>
                                         </div>
                                     </div>
@@ -520,212 +522,89 @@
         </div>
     </div>
 
-    <!-- Thumbnail Designer Modal -->
-    <div class="preview-modal" id="thumbnail-modal" style="display: none;">
-        <div class="preview-modal-overlay" id="thumbnail-modal-overlay"></div>
+    <!-- GPT Prompt Modal -->
+    <div class="preview-modal" id="gpt-prompt-modal" style="display: none;">
+        <div class="preview-modal-overlay" id="gpt-prompt-modal-overlay"></div>
         <div class="preview-modal-content" style="max-width: 960px; width: 95%; max-height: 90vh; height: auto;">
-            <button class="preview-modal-close" id="thumbnail-modal-close">✕</button>
+            <button class="preview-modal-close" id="gpt-prompt-modal-close">✕</button>
             <div class="preview-modal-header" style="margin-bottom: 12px; border-bottom: 1px solid var(--border); padding-bottom: 8px;">
-                <h3 style="font-size: 15px; font-weight: 700; color: var(--text-hi); display: flex; align-items: center; gap: 8px;"><i data-lucide="palette" style="width:16px;height:16px;"></i> Cover Art & Thumbnail Designer</h3>
+                <h3 style="font-size: 15px; font-weight: 700; color: var(--text-hi); display: flex; align-items: center; gap: 8px;"><i data-lucide="sparkles" style="width:16px;height:16px;color:var(--accent);"></i> AI Collage Poster & Prompt Generator</h3>
             </div>
             
-            <div class="thumbnail-modal-grid">
-                <!-- Left Column: Interactive Canvas Workspace -->
-                <div class="thumbnail-workspace">
-                    <div class="thumbnail-canvas-container" id="thumbnail-canvas-container">
-                        <canvas id="thumbnail-canvas"></canvas>
+            <div class="gpt-modal-grid">
+                <!-- Left Column: Select Photos -->
+                <div class="gpt-selection-panel">
+                    <div class="gpt-section-title">
+                        <span>Select Photos</span>
+                        <span style="font-size: 9px; font-weight: normal; color: var(--text-lo);" id="gpt-cutout-count">Selected: 0</span>
                     </div>
-                    <div style="position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); font-size: 10px; color: var(--text-mid); background: rgba(255,255,255,0.85); padding: 4px 10px; border-radius: 20px; border: 1px solid var(--border); pointer-events: none; white-space: nowrap; display: flex; align-items: center; gap: 4px;">
-                        <i data-lucide="move" style="width:10px;height:10px;"></i> Drag cutouts or caption text directly on the canvas to design!
+                    <p style="font-size: 10px; color: var(--text-mid); margin: -4px 0 6px 0;">Toggle photos to include in the prompt and ZIP download bundle.</p>
+                    <div style="display: flex; gap: 6px; margin-bottom: 8px;">
+                        <button type="button" class="secondary-btn" id="btn-gpt-select-all" style="font-size: 9.5px; padding: 4px 8px; height: auto;">Select All</button>
+                        <button type="button" class="secondary-btn" id="btn-gpt-deselect-all" style="font-size: 9.5px; padding: 4px 8px; height: auto;">Clear All</button>
+                    </div>
+                    <div class="gpt-cutout-list" id="gpt-cutout-list">
+                        <!-- Populated dynamically via JS -->
                     </div>
                 </div>
                 
-                <!-- Right Column: Design controls -->
-                <div class="thumbnail-controls-panel">
-                    <!-- Mode selection -->
-                    <div class="thumbnail-section-card">
-                        <div class="thumbnail-section-title">Design Mode</div>
-                        <div class="segmented-control" style="display: flex; width: 100%;">
-                            <button type="button" id="btn-thumb-mode-auto" class="segment-btn active" style="flex: 1; padding: 6px;"><i data-lucide="zap" style="width:11px;height:11px;margin-right:3px;vertical-align:middle;"></i>Auto</button>
-                            <button type="button" id="btn-thumb-mode-manual" class="segment-btn" style="flex: 1; padding: 6px;"><i data-lucide="pencil-ruler" style="width:11px;height:11px;margin-right:3px;vertical-align:middle;"></i>Manual</button>
+                <!-- Right Column: Settings & Prompt Output -->
+                <div class="gpt-controls-panel">
+                    <!-- Text inputs -->
+                    <div class="gpt-section-card">
+                        <div class="gpt-section-title">Poster Settings</div>
+                        <div class="control-slider-group" style="margin-bottom: 8px;">
+                            <label style="font-size: 9.5px; margin-bottom: 2px;">Poster Title / Caption:</label>
+                            <input type="text" id="gpt-caption-input" class="custom-select" style="padding: 6px 10px; font-size: 11px; height: 30px;" placeholder="Add caption text (e.g. OK JAANU)...">
                         </div>
-                        <div id="thumb-auto-generate-area" style="margin-top: 6px;">
-                            <button type="button" class="primary-btn wide-btn" id="btn-thumb-auto-generate" style="padding: 8px; font-size: 11px; display: flex; align-items: center; justify-content: center; gap: 5px;"><i data-lucide="sparkles" style="width:12px;height:12px;"></i>Auto-Collage Layout</button>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                            <div class="control-slider-group" style="margin-bottom: 0;">
+                                <label style="font-size: 9.5px; margin-bottom: 2px;">Font Style:</label>
+                                <select id="gpt-font-style-select" class="custom-select" style="padding: 4px 8px; font-size: 11px; height: 28px;">
+                                    <option value="aesthetic bold & chunky font, with thick hand-drawn borders" selected>Aesthetic Bold & Chunky</option>
+                                    <option value="heavy bold sans-serif block font, with sharp edges">Heavy Anton Impact</option>
+                                    <option value="retro 3D offset display font, with vintage drop-shadow colors">Retro 3D Offset</option>
+                                    <option value="cyberpunk neon display font, with glowing pink and cyan edges">Cyberpunk Neon</option>
+                                    <option value="sports collegiate block letters, with high-contrast outlines">Sports Collegiate</option>
+                                    <option value="elegant luxury serif font, with high-contrast details and classy curves">Elegant Minimalist Serif</option>
+                                </select>
+                            </div>
+                            <div class="control-slider-group" style="margin-bottom: 0;">
+                                <label style="font-size: 9.5px; margin-bottom: 2px;">Layout Theme:</label>
+                                <select id="gpt-layout-style-select" class="custom-select" style="padding: 4px 8px; font-size: 11px; height: 28px;">
+                                    <option value="overlapping layered scrapbook layout, with retro polaroid photo frames and warm indie vibes" selected>Overlapping Scrapbook</option>
+                                    <option value="clean, structured grid poster layout, with minimalist white borders and high-fashion style spacing">Structured Clean Grid</option>
+                                    <option value="scattered polaroid stacks and memory cards, arranged randomly on a warm textured kraft paper background">Scattered Polaroids</option>
+                                    <option value="cinematic movie poster layout, with dramatic lighting, overlapping silhouettes, and soft-feathered borders">Cinematic Movie Poster</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div style="margin-top: 10px;">
+                            <label style="display: inline-flex; align-items: center; gap: 6px; font-size: 10px; color: var(--text-mid); cursor: pointer;">
+                                <input type="checkbox" id="gpt-auto-download-zip" checked style="width: 13px; height: 13px; cursor: pointer; accent-color: var(--accent);">
+                                Download ZIP automatically when copying prompt
+                            </label>
                         </div>
                     </div>
 
-                    <!-- Cutouts Selection (Available in both modes, controls which cutouts can be drawn) -->
-                    <div class="thumbnail-section-card">
-                        <div class="thumbnail-section-title">
-                            <span>Select Cutouts</span>
-                            <span style="font-size: 9px; font-weight: normal; color: var(--text-lo);" id="cutout-limit-indicator">Included: 0</span>
-                        </div>
-                        <p style="font-size: 10px; color: var(--text-mid); margin: -4px 0 6px 0;">Toggle cutouts to include in collage cover art.</p>
-                        <div class="cutout-selection-list" id="thumb-cutout-list">
-                            <!-- Populated dynamically via JS -->
-                        </div>
+                    <!-- Prompt Output Card -->
+                    <div class="gpt-section-card" style="flex: 1; display: flex; flex-direction: column; min-height: 150px;">
+                        <div class="gpt-section-title">DALL-E / GPT-4o Prompt</div>
+                        <textarea id="gpt-prompt-output" class="custom-select" style="flex: 1; width: 100%; font-family: monospace; font-size: 10px; line-height: 1.4; padding: 10px; background: var(--bg-preview); border: 1px solid var(--border-md); border-radius: var(--r-xs); resize: none; color: var(--text-hi);" readonly></textarea>
                     </div>
 
-                    <!-- Manual controls (only visible/interactable in manual mode) -->
-                    <div class="thumbnail-section-card" id="thumb-manual-controls-card" style="opacity: 0.6; pointer-events: none; transition: opacity 0.2s;">
-                        <div class="thumbnail-section-title">Manual Transform</div>
-                        <div class="control-slider-group" style="margin-bottom: 8px;">
-                            <div class="slider-header" style="font-size: 10px; margin-bottom: 2px;">
-                                <span>Scale: <span id="thumb-active-scale-val">100%</span></span>
-                            </div>
-                            <input type="range" id="thumb-active-scale" min="20" max="200" value="100" class="custom-slider" style="height: 4px; padding: 0;">
-                        </div>
-                        <div class="control-slider-group" style="margin-bottom: 8px;">
-                            <div class="slider-header" style="font-size: 10px; margin-bottom: 2px;">
-                                <span>Rotation: <span id="thumb-active-rotation-val">0°</span></span>
-                            </div>
-                            <input type="range" id="thumb-active-rotation" min="-180" max="180" value="0" class="custom-slider" style="height: 4px; padding: 0;">
-                        </div>
-                        <div style="display: flex; gap: 8px; margin-top: 6px;">
-                            <button type="button" class="secondary-btn" id="btn-thumb-layer-down" style="flex: 1; font-size: 10px; padding: 5px;" title="Send active cutout backward">Layer Down</button>
-                            <button type="button" class="secondary-btn" id="btn-thumb-layer-up" style="flex: 1; font-size: 10px; padding: 5px;" title="Bring active cutout forward">Layer Up</button>
-                        </div>
-                        <p id="thumb-selection-hint" style="font-size: 9px; color: var(--accent); margin: 6px 0 0 0; text-align: center; font-weight: 500;"><i data-lucide="mouse-pointer-click" style="width:9px;height:9px;vertical-align:middle;"></i> Click any cutout or text on the canvas to select it.</p>
-                    </div>
-
-                    <!-- Background settings -->
-                    <div class="thumbnail-section-card">
-                        <div class="thumbnail-section-title">Background Style</div>
-                        <div class="control-slider-group" style="margin-bottom: 6px;">
-                            <select id="thumb-bg-type-select" class="custom-select" style="padding: 4px 8px; font-size: 11px; height: 26px;">
-                                <option value="gradient">Gradient Blend</option>
-                                <option value="solid">Solid Color</option>
-                                <option value="blur">Blurred Photo</option>
-                                <option value="transparent">Transparent</option>
-                            </select>
-                        </div>
-                        <div id="thumb-bg-color-pickers" style="display: flex; gap: 10px;">
-                            <div class="control-slider-group" id="thumb-bg-color-1-group" style="margin-bottom: 0; flex: 1;">
-                                <label style="font-size: 9px; margin-bottom: 2px;">Color 1:</label>
-                                <input type="color" id="thumb-bg-color-1" value="#ff4b8b" style="width: 100%; height: 24px; border: 1px solid var(--border-md); border-radius: var(--r-xs); cursor: pointer; padding: 0; background: none;">
-                            </div>
-                            <div class="control-slider-group" id="thumb-bg-color-2-group" style="margin-bottom: 0; flex: 1;">
-                                <label style="font-size: 9px; margin-bottom: 2px;">Color 2:</label>
-                                <input type="color" id="thumb-bg-color-2" value="#2b1055" style="width: 100%; height: 24px; border: 1px solid var(--border-md); border-radius: var(--r-xs); cursor: pointer; padding: 0; background: none;">
-                            </div>
-                        </div>
-                        <div class="control-slider-group" id="thumb-bg-blur-select-group" style="margin-bottom: 0; display: none;">
-                            <label style="font-size: 9px; margin-bottom: 2px;">Select Photo:</label>
-                            <select id="thumb-bg-blur-select" class="custom-select" style="padding: 4px 8px; font-size: 11px; height: 26px;"></select>
-                        </div>
-                    </div>
-
-                    <!-- Caption customizer -->
-                    <div class="thumbnail-section-card">
-                        <div class="thumbnail-section-title">Caption Overlay</div>
-                        <div class="control-slider-group" style="margin-bottom: 8px;">
-                            <input type="text" id="thumb-caption-input" class="custom-select" style="padding: 6px 10px; font-size: 11px; height: 30px;" placeholder="Add caption text...">
-                        </div>
-                        <div class="control-slider-group" style="margin-bottom: 8px;">
-                            <label style="font-size: 9px; margin-bottom: 4px; display: flex; align-items: center; gap: 4px;"><i data-lucide="type" style="width:9px;height:9px;"></i> Aesthetic Font:</label>
-                            <select id="thumb-font-select" class="custom-select" style="padding: 4px 8px; font-size: 11px; height: 28px;">
-                                <optgroup label="— Bold Impact —">
-                                    <option value="Dela Gothic One" selected>Dela Gothic One — Chunky Bold</option>
-                                    <option value="Anton">Anton — Heavy Impact</option>
-                                    <option value="Bebas Neue">Bebas Neue — All-Caps Cinematic</option>
-                                    <option value="Black Han Sans">Black Han Sans — Solid Korean Bold</option>
-                                    <option value="Changa One">Changa One — Condensed Italic</option>
-                                    <option value="Titan One">Titan One — Retro Rounded</option>
-                                    <option value="Lilita One">Lilita One — Fun Display</option>
-                                    <option value="Righteous">Righteous — Stylish Rounded</option>
-                                    <option value="Graduate">Graduate — Sports Collegiate</option>
-                                    <option value="Russo One">Russo One — Military Strong</option>
-                                </optgroup>
-                                <optgroup label="— Expressive —">
-                                    <option value="Bungee">Bungee — Retro Street Sign</option>
-                                    <option value="Syne">Syne — Trendy Wide Display</option>
-                                    <option value="Oswald">Oswald — News Headline</option>
-                                    <option value="Montserrat">Montserrat — Geometric Modern</option>
-                                    <option value="Poppins">Poppins — Clean Rounded</option>
-                                </optgroup>
-                                <optgroup label="— Elegant —">
-                                    <option value="Playfair Display">Playfair Display — Classic Serif</option>
-                                    <option value="Satisfy">Satisfy — Handwritten Cursive</option>
-                                    <option value="Outfit">Outfit — Clean Minimal</option>
-                                </optgroup>
-                            </select>
-                        </div>
-
-                        <!-- Color Preset Swatches -->
-                        <div class="control-slider-group" style="margin-bottom: 8px;">
-                            <label style="font-size: 9px; margin-bottom: 4px;">Color Preset:</label>
-                            <div id="thumb-color-presets" style="display: flex; flex-wrap: wrap; gap: 5px;">
-                                <button type="button" class="color-preset-btn active" data-preset="white" title="Clean White" style="background:#ffffff; color:#000; border: 2px solid #ccc;">White</button>
-                                <button type="button" class="color-preset-btn" data-preset="yellow" title="Highlight Yellow" style="background:#FFD700; color:#000;">Gold</button>
-                                <button type="button" class="color-preset-btn" data-preset="sunset" title="Sunset Gradient" style="background: linear-gradient(135deg,#FF6B35,#FFD700); color:#000;">Sunset</button>
-                                <button type="button" class="color-preset-btn" data-preset="candy" title="Cotton Candy" style="background: linear-gradient(135deg,#FF6EC7,#B9F2FF); color:#333;">Candy</button>
-                                <button type="button" class="color-preset-btn" data-preset="cyber" title="Cyberpunk" style="background: linear-gradient(135deg,#00FFFF,#FF00FF); color:#000;">Cyber</button>
-                                <button type="button" class="color-preset-btn" data-preset="gold" title="Gold Royalty" style="background: linear-gradient(135deg,#BF953F,#FCF6BA,#B38728); color:#333;">Royal</button>
-                                <button type="button" class="color-preset-btn" data-preset="neon" title="Neon Green" style="background:#39FF14; color:#000;">Neon</button>
-                                <button type="button" class="color-preset-btn" data-preset="fire" title="Fire Red" style="background: linear-gradient(135deg,#FF416C,#FF4B2B); color:#fff;">Fire</button>
-                            </div>
-                        </div>
-
-                        <div style="display: flex; gap: 8px; margin-bottom: 8px;">
-                            <div class="control-slider-group" style="margin-bottom: 0; flex: 1;">
-                                <label style="font-size: 9px; margin-bottom: 2px;">Fill Color:</label>
-                                <input type="color" id="thumb-caption-color" value="#ffffff" style="width: 100%; height: 24px; border: 1px solid var(--border-md); border-radius: var(--r-xs); cursor: pointer; padding: 0; background: none;">
-                            </div>
-                            <div class="control-slider-group" style="margin-bottom: 0; flex: 1;">
-                                <label style="font-size: 9px; margin-bottom: 2px;">Grad. End:</label>
-                                <input type="color" id="thumb-caption-grad-end" value="#FFD700" style="width: 100%; height: 24px; border: 1px solid var(--border-md); border-radius: var(--r-xs); cursor: pointer; padding: 0; background: none;">
-                            </div>
-                            <div class="control-slider-group" style="margin-bottom: 0; flex: 1;">
-                                <label style="font-size: 9px; margin-bottom: 2px;">Stroke:</label>
-                                <input type="color" id="thumb-caption-stroke" value="#000000" style="width: 100%; height: 24px; border: 1px solid var(--border-md); border-radius: var(--r-xs); cursor: pointer; padding: 0; background: none;">
-                            </div>
-                        </div>
-
-                        <!-- Text Fill Type -->
-                        <div class="control-slider-group" style="margin-bottom: 8px;">
-                            <label style="font-size: 9px; margin-bottom: 4px;">Text Fill:</label>
-                            <div class="segmented-control" style="display: flex; width: 100%;">
-                                <button type="button" id="thumb-fill-solid" class="segment-btn active" style="flex: 1; padding: 4px; font-size: 10px;">Solid</button>
-                                <button type="button" id="thumb-fill-gradient" class="segment-btn" style="flex: 1; padding: 4px; font-size: 10px;">Gradient</button>
-                            </div>
-                        </div>
-
-                        <!-- Shadow Preset -->
-                        <div class="control-slider-group" style="margin-bottom: 8px;">
-                            <label style="font-size: 9px; margin-bottom: 4px;"><i data-lucide="sparkles" style="width:9px;height:9px;"></i> Shadow Style:</label>
-                            <select id="thumb-shadow-select" class="custom-select" style="padding: 4px 8px; font-size: 11px; height: 26px;">
-                                <option value="none">None</option>
-                                <option value="deep">Deep Black Drop</option>
-                                <option value="glow">Glowing Neon</option>
-                                <option value="retro3d" selected>Retro 3D Offset</option>
-                                <option value="soft">Soft Elegant</option>
-                            </select>
-                        </div>
-
-                        <div class="control-slider-group" style="margin-bottom: 6px;">
-                            <div class="slider-header" style="font-size: 10px; margin-bottom: 2px;">
-                                <span>Font Size: <span id="thumb-font-size-val">60px</span></span>
-                            </div>
-                            <input type="range" id="thumb-font-size" min="20" max="150" value="60" class="custom-slider" style="height: 4px; padding: 0;">
-                        </div>
-                        <div class="control-slider-group" style="margin-bottom: 0;">
-                            <div class="slider-header" style="font-size: 10px; margin-bottom: 2px;">
-                                <span>Outline Width: <span id="thumb-stroke-width-val">6px</span></span>
-                            </div>
-                            <input type="range" id="thumb-stroke-width" min="0" max="20" value="6" class="custom-slider" style="height: 4px; padding: 0;">
-                        </div>
-                    </div>
-
-                    <!-- Save / Export Actions -->
+                    <!-- Action buttons -->
                     <div style="display: flex; gap: 10px; margin-top: auto; padding-top: 10px; border-top: 1px solid var(--border);">
-                        <button type="button" class="secondary-btn" id="btn-thumb-download" style="flex: 1; font-size: 11px; padding: 8px; display: flex; align-items: center; justify-content: center; gap: 4px;"><i data-lucide="download" style="width:12px;height:12px;"></i> Download PNG</button>
-                        <button type="button" class="primary-btn" id="btn-thumb-save" style="flex: 1; font-size: 11px; padding: 8px; display: flex; align-items: center; justify-content: center; gap: 4px;"><i data-lucide="check" style="width:12px;height:12px;"></i> Save & Apply</button>
+                        <button type="button" class="secondary-btn" id="btn-gpt-download-images" style="flex: 1; font-size: 11px; padding: 8px; display: flex; align-items: center; justify-content: center; gap: 4px;"><i data-lucide="download" style="width:12px;height:12px;"></i> Download ZIP</button>
+                        <button type="button" class="primary-btn" id="btn-gpt-copy-prompt" style="flex: 1; font-size: 11px; padding: 8px; display: flex; align-items: center; justify-content: center; gap: 4px;"><i data-lucide="copy" style="width:12px;height:12px;"></i> Copy Prompt</button>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- JSZip Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <!-- Lucide Icon Library -->
     <script src="https://unpkg.com/lucide@latest"></script>
     <!-- JavaScript Files (ES Module structure) -->

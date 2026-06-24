@@ -249,52 +249,26 @@ const DOM = {
     infoBtnHold: document.getElementById('info-btn-hold'),
     videoAspectRatio: document.getElementById('video-aspect-ratio'),
     
-    // Video Cover / Thumbnail settings
-    thumbnailPreviewBox: document.getElementById('thumbnail-preview-box'),
-    thumbnailPreviewImg: document.getElementById('thumbnail-preview-img'),
-    thumbnailPreviewPlaceholder: document.getElementById('thumbnail-preview-placeholder'),
-    btnOpenThumbnailDesigner: document.getElementById('btn-open-thumbnail-designer'),
-    thumbnailModal: document.getElementById('thumbnail-modal'),
-    thumbnailModalClose: document.getElementById('thumbnail-modal-close'),
-    thumbnailModalOverlay: document.getElementById('thumbnail-modal-overlay'),
-    thumbnailCanvas: document.getElementById('thumbnail-canvas'),
-    thumbnailCanvasContainer: document.getElementById('thumbnail-canvas-container'),
-    btnThumbModeAuto: document.getElementById('btn-thumb-mode-auto'),
-    btnThumbModeManual: document.getElementById('btn-thumb-mode-manual'),
-    btnThumbAutoGenerate: document.getElementById('btn-thumb-auto-generate'),
-    thumbAutoGenerateArea: document.getElementById('thumb-auto-generate-area'),
-    thumbCutoutList: document.getElementById('thumb-cutout-list'),
-    cutoutLimitIndicator: document.getElementById('cutout-limit-indicator'),
-    thumbManualControlsCard: document.getElementById('thumb-manual-controls-card'),
-    thumbActiveScale: document.getElementById('thumb-active-scale'),
-    thumbActiveScaleVal: document.getElementById('thumb-active-scale-val'),
-    thumbActiveRotation: document.getElementById('thumb-active-rotation'),
-    thumbActiveRotationVal: document.getElementById('thumb-active-rotation-val'),
-    btnThumbLayerDown: document.getElementById('btn-thumb-layer-down'),
-    btnThumbLayerUp: document.getElementById('btn-thumb-layer-up'),
-    thumbBgTypeSelect: document.getElementById('thumb-bg-type-select'),
-    thumbBgColorPickers: document.getElementById('thumb-bg-color-pickers'),
-    thumbBgColor1: document.getElementById('thumb-bg-color-1'),
-    thumbBgColor2: document.getElementById('thumb-bg-color-2'),
-    thumbBgColor1Group: document.getElementById('thumb-bg-color-1-group'),
-    thumbBgColor2Group: document.getElementById('thumb-bg-color-2-group'),
-    thumbBgBlurSelectGroup: document.getElementById('thumb-bg-blur-select-group'),
-    thumbBgBlurSelect: document.getElementById('thumb-bg-blur-select'),
-    thumbCaptionInput: document.getElementById('thumb-caption-input'),
-    thumbFontSelect: document.getElementById('thumb-font-select'),
-    thumbCaptionColor: document.getElementById('thumb-caption-color'),
-    thumbCaptionStroke: document.getElementById('thumb-caption-stroke'),
-    thumbFontSize: document.getElementById('thumb-font-size'),
-    thumbFontSizeVal: document.getElementById('thumb-font-size-val'),
-    thumbStrokeWidth: document.getElementById('thumb-stroke-width'),
-    thumbStrokeWidthVal: document.getElementById('thumb-stroke-width-val'),
-    btnThumbDownload: document.getElementById('btn-thumb-download'),
-    btnThumbSave: document.getElementById('btn-thumb-save'),
-    thumbCaptionGradEnd: document.getElementById('thumb-caption-grad-end'),
-    thumbFillSolid: document.getElementById('thumb-fill-solid'),
-    thumbFillGradient: document.getElementById('thumb-fill-gradient'),
-    thumbShadowSelect: document.getElementById('thumb-shadow-select'),
-    thumbColorPresets: document.getElementById('thumb-color-presets')
+    // GPT Poster settings
+    btnOpenGptModal: document.getElementById('btn-open-gpt-modal'),
+    gptPromptModal: document.getElementById('gpt-prompt-modal'),
+    gptPromptModalClose: document.getElementById('gpt-prompt-modal-close'),
+    gptPromptModalOverlay: document.getElementById('gpt-prompt-modal-overlay'),
+    gptCutoutList: document.getElementById('gpt-cutout-list'),
+    gptCutoutCount: document.getElementById('gpt-cutout-count'),
+    btnGptSelectAll: document.getElementById('btn-gpt-select-all'),
+    btnGptDeselectAll: document.getElementById('btn-gpt-deselect-all'),
+    gptCaptionInput: document.getElementById('gpt-caption-input'),
+    gptFontStyleSelect: document.getElementById('gpt-font-style-select'),
+    gptLayoutStyleSelect: document.getElementById('gpt-layout-style-select'),
+    gptPromptOutput: document.getElementById('gpt-prompt-output'),
+    btnGptDownloadImages: document.getElementById('btn-gpt-download-images'),
+    btnGptCopyPrompt: document.getElementById('btn-gpt-copy-prompt'),
+    posterUploadInput: document.getElementById('poster-upload-input'),
+    btnUploadPoster: document.getElementById('btn-upload-poster'),
+    posterPreviewImg: document.getElementById('poster-preview-img'),
+    posterPreviewPlaceholder: document.getElementById('poster-preview-placeholder'),
+    gptAutoDownloadZip: document.getElementById('gpt-auto-download-zip')
 };
 
 // Canvas context for manual cutout editor
@@ -787,26 +761,17 @@ async function loadProject(projectId) {
         state.videoRatio = project.settings.videoRatio || '9-16';
         state.captionFont = project.settings.captionFont || 'playfair';
 
-        // Restore Cover Art / Thumbnail designer settings
-        state.thumbnailMode = project.settings.thumbnailMode || 'auto';
-        state.thumbnailCaption = project.settings.thumbnailCaption || '';
-        state.thumbnailFont = project.settings.thumbnailFont || 'Dela Gothic One';
-        state.thumbnailFontSize = project.settings.thumbnailFontSize || 60;
-        state.thumbnailTextColor = project.settings.thumbnailTextColor || '#ffffff';
-        state.thumbnailStrokeColor = project.settings.thumbnailStrokeColor || '#000000';
-        state.thumbnailStrokeWidth = project.settings.thumbnailStrokeWidth !== undefined ? project.settings.thumbnailStrokeWidth : 6;
-        state.thumbnailTextX = project.settings.thumbnailTextX !== undefined ? project.settings.thumbnailTextX : 50;
-        state.thumbnailTextY = project.settings.thumbnailTextY !== undefined ? project.settings.thumbnailTextY : 80;
-        state.thumbnailBgType = project.settings.thumbnailBgType || 'gradient';
-        state.thumbnailBgColor = project.settings.thumbnailBgColor || '#1e1e2e';
-        state.thumbnailBgGradStart = project.settings.thumbnailBgGradStart || '#ff4b8b';
-        state.thumbnailBgGradEnd = project.settings.thumbnailBgGradEnd || '#2b1055';
-        state.thumbnailBgBlurIdx = project.settings.thumbnailBgBlurIdx !== undefined ? project.settings.thumbnailBgBlurIdx : 0;
-        state.thumbnailCutouts = project.settings.thumbnailCutouts || [];
+        // Restore GPT Poster designer settings
+        state.gptPosterCaption = project.settings.gptPosterCaption || '';
+        state.gptFontStyle = project.settings.gptFontStyle || 'aesthetic bold & chunky font, with thick hand-drawn borders';
+        state.gptLayoutStyle = project.settings.gptLayoutStyle || 'overlapping layered scrapbook layout, with retro polaroid photo frames and warm indie vibes';
+        state.gptSelectedCutouts = project.settings.gptSelectedCutouts || [];
         state.thumbnailDataUrl = project.settings.thumbnailDataUrl || null;
-        state.thumbnailTextFillType = project.settings.thumbnailTextFillType || 'solid';
-        state.thumbnailGradEnd = project.settings.thumbnailGradEnd || '#FFD700';
-        state.thumbnailShadowStyle = project.settings.thumbnailShadowStyle || 'retro3d';
+
+        if (DOM.gptCaptionInput) DOM.gptCaptionInput.value = state.gptPosterCaption;
+        if (DOM.gptFontStyleSelect) DOM.gptFontStyleSelect.value = state.gptFontStyle;
+        if (DOM.gptLayoutStyleSelect) DOM.gptLayoutStyleSelect.value = state.gptLayoutStyle;
+        updatePosterPreviewUI();
 
         // Apply volume to AudioEngine immediately on project load (tracks volume state internally)
         audio.setVolume(state.musicVolume);
@@ -855,7 +820,6 @@ async function loadProject(projectId) {
 
         updateSpeedModeUI();
         updateVideoAspectRatio();
-        updateThumbnailPreviewUI();
 
         if (renderer) {
             renderer.slideDuration = state.slideDuration;
@@ -2279,8 +2243,8 @@ function setupEventListeners() {
         DOM.btnPrevCropApply.addEventListener('click', applyCrop);
     }
     
-    // Setup Cover Art / Thumbnail designer event listeners
-    setupThumbnailEventListeners();
+    // Setup GPT Poster Prompt designer event listeners
+    setupGptPromptEventListeners();
 }
 
 // Image Preview Modal Functions
@@ -3854,1016 +3818,287 @@ function drawTransitionCurve() {
 }
 
 // =========================================================================
-// 🎨 COVER ART & THUMBNAIL DESIGNER MODULE
+// 🎨 GPT COLLAGE POSTER PROMPT & BATCH PHOTO ZIP EXPORTER
 // =========================================================================
 
-let activeSelectedCutout = null;
-let activeSelectedElement = null; // 'text' or config object
-
-let thumbDragSession = {
-    activeElement: null, // 'text' or config
-    isDragging: false,
-    startX: 0,
-    startY: 0,
-    elemStartX: 0,
-    elemStartY: 0
-};
-
-// Render small cover art thumbnail preview box in Step 4 sidebar
-function updateThumbnailPreviewUI() {
-    if (state.thumbnailDataUrl) {
-        DOM.thumbnailPreviewImg.src = state.thumbnailDataUrl;
-        DOM.thumbnailPreviewImg.style.display = 'block';
-        DOM.thumbnailPreviewPlaceholder.style.display = 'none';
-    } else {
-        DOM.thumbnailPreviewImg.style.display = 'none';
-        DOM.thumbnailPreviewPlaceholder.style.display = 'block';
-        DOM.thumbnailPreviewPlaceholder.textContent = 'No Cover';
-    }
-}
-
-// Adjust canvas dimensions and styles based on selected aspect ratio
-function resizeThumbnailCanvas() {
-    const canvas = DOM.thumbnailCanvas;
-    if (!canvas) return;
+function openGptModal() {
+    if (!DOM.gptPromptModal) return;
+    DOM.gptPromptModal.style.display = 'flex';
     
-    let width = 1080;
-    let height = 1080;
-    
-    if (state.videoRatio === '9-16') {
-        width = 1080;
-        height = 1920;
-    } else if (state.videoRatio === '16-9') {
-        width = 1920;
-        height = 1080;
-    } else if (state.videoRatio === '4-5') {
-        width = 1080;
-        height = 1350;
-    }
-    
-    canvas.width = width;
-    canvas.height = height;
-    
-    const parent = DOM.thumbnailCanvasContainer;
-    const parentRect = parent.parentElement.getBoundingClientRect();
-    const maxWidth = parentRect.width - 40;
-    const maxHeight = parentRect.height - 40;
-    
-    const aspect = width / height;
-    let cssWidth = maxWidth;
-    let cssHeight = maxWidth / aspect;
-    
-    if (cssHeight > maxHeight) {
-        cssHeight = maxHeight;
-        cssWidth = maxHeight * aspect;
-    }
-    
-    canvas.style.width = `${cssWidth}px`;
-    canvas.style.height = `${cssHeight}px`;
-}
-
-// Renders solid background, gradients, blurred photos, cutouts and caption overlays
-function drawThumbnail() {
-    const canvas = DOM.thumbnailCanvas;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    const w = canvas.width;
-    const h = canvas.height;
-    
-    ctx.clearRect(0, 0, w, h);
-    
-    // 1. Render Background
-    if (state.thumbnailBgType === 'solid') {
-        ctx.fillStyle = state.thumbnailBgColor;
-        ctx.fillRect(0, 0, w, h);
-    } else if (state.thumbnailBgType === 'gradient') {
-        const grad = ctx.createLinearGradient(0, 0, 0, h);
-        grad.addColorStop(0, state.thumbnailBgGradStart);
-        grad.addColorStop(1, state.thumbnailBgGradEnd);
-        ctx.fillStyle = grad;
-        ctx.fillRect(0, 0, w, h);
-    } else if (state.thumbnailBgType === 'blur') {
-        const slide = state.slides[state.thumbnailBgBlurIdx];
-        if (slide && slide.img) {
-            const imgAspect = slide.img.naturalWidth / slide.img.naturalHeight;
-            const canvasAspect = w / h;
-            let drawW, drawH, drawX, drawY;
-            if (imgAspect > canvasAspect) {
-                drawH = h;
-                drawW = h * imgAspect;
-                drawX = (w - drawW) / 2;
-                drawY = 0;
-            } else {
-                drawW = w;
-                drawH = w / imgAspect;
-                drawX = 0;
-                drawY = (h - drawH) / 2;
-            }
-            
-            // Draw blurred image
-            ctx.save();
-            ctx.filter = 'blur(35px)';
-            ctx.drawImage(slide.img, drawX, drawY, drawW, drawH);
-            ctx.restore();
-            
-            // Overlay tint
-            ctx.fillStyle = 'rgba(28, 23, 64, 0.4)';
-            ctx.fillRect(0, 0, w, h);
-        } else {
-            ctx.fillStyle = '#1e1e2e';
-            ctx.fillRect(0, 0, w, h);
-        }
-    }
-    
-    // 2. Render Selected Cutouts
-    const visibleCutouts = state.thumbnailCutouts
-        .filter(c => c.visible)
-        .sort((a, b) => a.zIndex - b.zIndex);
-        
-    visibleCutouts.forEach((config) => {
-        const slide = state.slides.find(s => s.id === config.slideId);
-        if (!slide || !slide.cutout) return;
-        
-        ctx.save();
-        const cx = (config.x / 100) * w;
-        const cy = (config.y / 100) * h;
-        
-        ctx.translate(cx, cy);
-        ctx.rotate(config.rotation);
-        
-        const scale = config.scale * (w / 1080);
-        const destW = slide.cutout.width * scale;
-        const destH = slide.cutout.height * scale;
-        
-        ctx.drawImage(slide.cutout, -destW / 2, -destH / 2, destW, destH);
-        
-        // Render dashed bounding frame in Manual Mode
-        if (state.thumbnailMode === 'manual' && activeSelectedCutout === config) {
-            ctx.strokeStyle = '#7c6fdb';
-            ctx.lineWidth = 4;
-            ctx.setLineDash([8, 8]);
-            ctx.strokeRect(-destW / 2 - 4, -destH / 2 - 4, destW + 8, destH + 8);
-            
-            // Square handles on corners
-            ctx.fillStyle = '#ffffff';
-            ctx.strokeStyle = '#7c6fdb';
-            ctx.lineWidth = 3;
-            ctx.setLineDash([]);
-            const hs = 12;
-            ctx.fillRect(-destW/2 - 4 - hs/2, -destH/2 - 4 - hs/2, hs, hs);
-            ctx.strokeRect(-destW/2 - 4 - hs/2, -destH/2 - 4 - hs/2, hs, hs);
-            ctx.fillRect(destW/2 + 4 - hs/2, -destH/2 - 4 - hs/2, hs, hs);
-            ctx.strokeRect(destW/2 + 4 - hs/2, -destH/2 - 4 - hs/2, hs, hs);
-            ctx.fillRect(-destW/2 - 4 - hs/2, destH/2 + 4 - hs/2, hs, hs);
-            ctx.strokeRect(-destW/2 - 4 - hs/2, destH/2 + 4 - hs/2, hs, hs);
-            ctx.fillRect(destW/2 + 4 - hs/2, destH/2 + 4 - hs/2, hs, hs);
-            ctx.strokeRect(destW/2 + 4 - hs/2, destH/2 + 4 - hs/2, hs, hs);
-        }
-        ctx.restore();
-    });
-    
-    // 3. Render Caption Overlay
-    if (state.thumbnailCaption) {
-        ctx.save();
-        const tx = (state.thumbnailTextX / 100) * w;
-        const ty = (state.thumbnailTextY / 100) * h;
-        
-        ctx.translate(tx, ty);
-        ctx.font = `bold ${state.thumbnailFontSize}px "${state.thumbnailFont}"`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        
-        const lines = state.thumbnailCaption.split('\n');
-        const lineHeight = state.thumbnailFontSize * 1.15;
-        
-        if (state.thumbnailMode === 'manual' && activeSelectedElement === 'text') {
-            let maxLineWidth = 0;
-            lines.forEach(line => {
-                const width = ctx.measureText(line).width;
-                if (width > maxLineWidth) maxLineWidth = width;
-            });
-            const textH = lines.length * lineHeight;
-            ctx.strokeStyle = '#7c6fdb';
-            ctx.lineWidth = 4;
-            ctx.setLineDash([8, 8]);
-            ctx.strokeRect(-maxLineWidth/2 - 15, -textH/2 - 10, maxLineWidth + 30, textH + 20);
-            ctx.setLineDash([]);
-        }
-        
-        lines.forEach((line, idx) => {
-            const ly = (idx - (lines.length - 1) / 2) * lineHeight;
-            
-            // Apply shadow style BEFORE drawing
-            const shadow = state.thumbnailShadowStyle || 'none';
-            ctx.shadowBlur = 0;
-            ctx.shadowOffsetX = 0;
-            ctx.shadowOffsetY = 0;
-            ctx.shadowColor = 'transparent';
-            
-            if (shadow === 'deep') {
-                ctx.shadowColor = 'rgba(0,0,0,0.85)';
-                ctx.shadowBlur = 16;
-                ctx.shadowOffsetX = 4;
-                ctx.shadowOffsetY = 6;
-            } else if (shadow === 'glow') {
-                ctx.shadowColor = state.thumbnailTextColor;
-                ctx.shadowBlur = 24;
-                ctx.shadowOffsetX = 0;
-                ctx.shadowOffsetY = 0;
-            } else if (shadow === 'soft') {
-                ctx.shadowColor = 'rgba(0,0,0,0.5)';
-                ctx.shadowBlur = 10;
-                ctx.shadowOffsetX = 2;
-                ctx.shadowOffsetY = 3;
-            }
-            
-            // Retro 3D: draw offset copies first, then main text
-            if (shadow === 'retro3d') {
-                ctx.shadowBlur = 0;
-                // Draw dark offset layers for 3D effect
-                for (let d = 6; d >= 1; d--) {
-                    ctx.fillStyle = `rgba(0,0,0,${0.08 * d})`;
-                    if (state.thumbnailStrokeWidth > 0) {
-                        ctx.lineJoin = 'round';
-                        ctx.strokeStyle = `rgba(0,0,0,${0.06 * d})`;
-                        ctx.lineWidth = state.thumbnailStrokeWidth;
-                        ctx.strokeText(line, d * 1.5, ly + d * 1.5);
-                    }
-                    ctx.fillText(line, d * 1.5, ly + d * 1.5);
-                }
-            }
-            
-            // Build fill (solid or gradient)
-            let textFill;
-            if (state.thumbnailTextFillType === 'gradient') {
-                // Measure bounding box for gradient height
-                const metrics = ctx.measureText(line);
-                const halfH = state.thumbnailFontSize * 0.6;
-                const grad = ctx.createLinearGradient(0, ly - halfH, 0, ly + halfH);
-                grad.addColorStop(0, state.thumbnailTextColor);
-                grad.addColorStop(1, state.thumbnailGradEnd || '#FFD700');
-                textFill = grad;
-            } else {
-                textFill = state.thumbnailTextColor;
-            }
-            
-            // Stroke outline
-            if (state.thumbnailStrokeWidth > 0) {
-                ctx.lineJoin = 'round';
-                ctx.strokeStyle = state.thumbnailStrokeColor;
-                ctx.lineWidth = state.thumbnailStrokeWidth;
-                ctx.strokeText(line, 0, ly);
-            }
-            ctx.fillStyle = state.thumbnailTextColor;
-            ctx.fillText(line, 0, ly);
-        });
-        
-        ctx.restore();
-    }
-}
-
-// Generate selectable cutouts list in the designer modal
-function renderCutoutSelectionList() {
-    if (!DOM.thumbCutoutList) return;
-    DOM.thumbCutoutList.innerHTML = '';
-    
-    const availableSlides = state.slides.filter(s => s.mask);
-    
-    // Make sure we have a config object in state.thumbnailCutouts for each slide
-    availableSlides.forEach((slide) => {
-        let config = state.thumbnailCutouts.find(c => c.slideId === slide.id);
-        if (!config) {
-            config = {
-                slideId: slide.id,
-                x: 50,
-                y: 50,
-                scale: 0.8,
-                rotation: 0,
-                zIndex: state.thumbnailCutouts.length,
-                visible: state.thumbnailCutouts.length < 3 // default first 3 visible
-            };
-            state.thumbnailCutouts.push(config);
-        }
-    });
-    
-    availableSlides.forEach((slide) => {
-        const config = state.thumbnailCutouts.find(c => c.slideId === slide.id);
-        if (!config) return;
-        
-        const isSelected = config.visible;
-        const isActive = activeSelectedCutout === config;
-        
-        const card = document.createElement('div');
-        card.className = `cutout-select-card${isSelected ? ' selected' : ''}${isActive ? ' active-selected' : ''}`;
-        card.dataset.slideId = slide.id;
-        
-        const img = document.createElement('img');
-        if (slide.cutout) {
-            img.src = slide.cutout.toDataURL('image/png', 0.4);
-        } else {
-            img.src = slide.img.src;
-        }
-        
-        const badge = document.createElement('div');
-        badge.className = 'cutout-badge-checkbox';
-        badge.textContent = isSelected ? '✓' : '';
-        
-        card.appendChild(img);
-        card.appendChild(badge);
-        
-        card.addEventListener('click', (e) => {
-            e.stopPropagation();
-            config.visible = !config.visible;
-            if (config.visible) {
-                activeSelectedCutout = config;
-                activeSelectedElement = config;
-                state.thumbnailMode = 'manual';
-                syncModeUI();
-            } else {
-                if (activeSelectedCutout === config) {
-                    activeSelectedCutout = null;
-                    activeSelectedElement = null;
-                }
-            }
-            renderCutoutSelectionList();
-            syncActiveCutoutSliders();
-            drawThumbnail();
-            triggerAutosave();
-        });
-        
-        DOM.thumbCutoutList.appendChild(card);
-    });
-    
-    const activeCount = state.thumbnailCutouts.filter(c => c.visible).length;
-    if (DOM.cutoutLimitIndicator) {
-        DOM.cutoutLimitIndicator.textContent = `Included: ${activeCount}`;
-    }
-}
-
-// Sync mode selection segmented controls
-function syncModeUI() {
-    if (state.thumbnailMode === 'auto') {
-        DOM.btnThumbModeAuto.classList.add('active');
-        DOM.btnThumbModeManual.classList.remove('active');
-        DOM.thumbAutoGenerateArea.style.display = 'block';
-        DOM.thumbManualControlsCard.style.opacity = '0.6';
-        DOM.thumbManualControlsCard.style.pointerEvents = 'none';
-    } else {
-        DOM.btnThumbModeManual.classList.add('active');
-        DOM.btnThumbModeAuto.classList.remove('active');
-        DOM.thumbAutoGenerateArea.style.display = 'none';
-        DOM.thumbManualControlsCard.style.opacity = activeSelectedCutout ? '1' : '0.6';
-        DOM.thumbManualControlsCard.style.pointerEvents = activeSelectedCutout ? 'auto' : 'none';
-    }
-}
-
-// Enable/Disable bg customizer sub-elements depending on solid/gradient/blur selection
-function syncBackgroundUI() {
-    if (!DOM.thumbBgTypeSelect) return;
-    DOM.thumbBgTypeSelect.value = state.thumbnailBgType;
-    
-    if (state.thumbnailBgType === 'solid') {
-        DOM.thumbBgColorPickers.style.display = 'flex';
-        DOM.thumbBgColor1Group.style.display = 'block';
-        DOM.thumbBgColor2Group.style.display = 'none';
-        DOM.thumbBgBlurSelectGroup.style.display = 'none';
-        
-        DOM.thumbBgColor1.value = state.thumbnailBgColor;
-    } else if (state.thumbnailBgType === 'gradient') {
-        DOM.thumbBgColorPickers.style.display = 'flex';
-        DOM.thumbBgColor1Group.style.display = 'block';
-        DOM.thumbBgColor2Group.style.display = 'block';
-        DOM.thumbBgBlurSelectGroup.style.display = 'none';
-        
-        DOM.thumbBgColor1.value = state.thumbnailBgGradStart;
-        DOM.thumbBgColor2.value = state.thumbnailBgGradEnd;
-    } else if (state.thumbnailBgType === 'blur') {
-        DOM.thumbBgColorPickers.style.display = 'none';
-        DOM.thumbBgBlurSelectGroup.style.display = 'block';
-        DOM.thumbBgBlurSelect.value = state.thumbnailBgBlurIdx;
-    } else { // transparent
-        DOM.thumbBgColorPickers.style.display = 'none';
-        DOM.thumbBgBlurSelectGroup.style.display = 'none';
-    }
-}
-
-// Sync caption styles panel form inputs
-function syncCaptionFormUI() {
-    if (DOM.thumbCaptionInput) DOM.thumbCaptionInput.value = state.thumbnailCaption;
-    if (DOM.thumbFontSelect) DOM.thumbFontSelect.value = state.thumbnailFont;
-    if (DOM.thumbCaptionColor) DOM.thumbCaptionColor.value = state.thumbnailTextColor;
-    if (DOM.thumbCaptionGradEnd) DOM.thumbCaptionGradEnd.value = state.thumbnailGradEnd || '#FFD700';
-    if (DOM.thumbCaptionStroke) DOM.thumbCaptionStroke.value = state.thumbnailStrokeColor;
-    if (DOM.thumbFontSize) {
-        DOM.thumbFontSize.value = state.thumbnailFontSize;
-        DOM.thumbFontSizeVal.textContent = state.thumbnailFontSize + 'px';
-    }
-    if (DOM.thumbStrokeWidth) {
-        DOM.thumbStrokeWidth.value = state.thumbnailStrokeWidth;
-        DOM.thumbStrokeWidthVal.textContent = state.thumbnailStrokeWidth + 'px';
-    }
-    // Sync fill type buttons
-    if (DOM.thumbFillSolid && DOM.thumbFillGradient) {
-        const isGrad = state.thumbnailTextFillType === 'gradient';
-        DOM.thumbFillSolid.classList.toggle('active', !isGrad);
-        DOM.thumbFillGradient.classList.toggle('active', isGrad);
-    }
-    // Sync shadow select
-    if (DOM.thumbShadowSelect) DOM.thumbShadowSelect.value = state.thumbnailShadowStyle || 'retro3d';
-}
-
-// Synchronize manual layout transform sliders for active cutout
-function syncActiveCutoutSliders() {
-    if (activeSelectedCutout) {
-        DOM.thumbActiveScale.value = Math.round(activeSelectedCutout.scale * 100);
-        DOM.thumbActiveScaleVal.textContent = Math.round(activeSelectedCutout.scale * 100) + '%';
-        const degrees = Math.round(activeSelectedCutout.rotation * 180 / Math.PI);
-        DOM.thumbActiveRotation.value = degrees;
-        DOM.thumbActiveRotationVal.textContent = degrees + '°';
-        
-        DOM.thumbManualControlsCard.style.opacity = '1';
-        DOM.thumbManualControlsCard.style.pointerEvents = 'auto';
-    } else {
-        DOM.thumbManualControlsCard.style.opacity = '0.6';
-        DOM.thumbManualControlsCard.style.pointerEvents = 'none';
-    }
-}
-
-// Drag & Drop event translation on workspace canvas
-function handleCanvasMouseDown(e) {
-    const canvas = DOM.thumbnailCanvas;
-    if (!canvas) return;
-    
-    const rect = canvas.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / rect.width * canvas.width;
-    const y = (e.clientY - rect.top) / rect.height * canvas.height;
-    
-    // 1. Text click test
-    if (state.thumbnailCaption) {
-        const tx = (state.thumbnailTextX / 100) * canvas.width;
-        const ty = (state.thumbnailTextY / 100) * canvas.height;
-        const ctx = canvas.getContext('2d');
-        ctx.font = `bold ${state.thumbnailFontSize}px "${state.thumbnailFont}"`;
-        
-        const lines = state.thumbnailCaption.split('\n');
-        const lineHeight = state.thumbnailFontSize * 1.15;
-        let maxLineWidth = 0;
-        lines.forEach(line => {
-            const width = ctx.measureText(line).width;
-            if (width > maxLineWidth) maxLineWidth = width;
-        });
-        const textH = lines.length * lineHeight;
-        
-        const dx = x - tx;
-        const dy = y - ty;
-        
-        if (Math.abs(dx) < (maxLineWidth/2 + 20) && Math.abs(dy) < (textH/2 + 20)) {
-            activeSelectedElement = 'text';
-            activeSelectedCutout = null;
-            
-            thumbDragSession.activeElement = 'text';
-            thumbDragSession.isDragging = true;
-            thumbDragSession.startX = x;
-            thumbDragSession.startY = y;
-            thumbDragSession.elemStartX = state.thumbnailTextX;
-            thumbDragSession.elemStartY = state.thumbnailTextY;
-            
-            if (state.thumbnailMode === 'auto') {
-                state.thumbnailMode = 'manual';
-                syncModeUI();
-            }
-            
-            highlightActiveSelectCard();
-            syncActiveCutoutSliders();
-            drawThumbnail();
-            return;
-        }
-    }
-    
-    // 2. Cutouts click test (topmost z-index first)
-    const visibleCutouts = state.thumbnailCutouts
-        .filter(c => c.visible)
-        .sort((a, b) => b.zIndex - a.zIndex);
-        
-    for (const config of visibleCutouts) {
-        const slide = state.slides.find(s => s.id === config.slideId);
-        if (!slide || !slide.cutout) continue;
-        
-        const cx = (config.x / 100) * canvas.width;
-        const cy = (config.y / 100) * canvas.height;
-        
-        const scale = config.scale * (canvas.width / 1080);
-        const destW = slide.cutout.width * scale;
-        const destH = slide.cutout.height * scale;
-        
-        const dx = x - cx;
-        const dy = y - cy;
-        
-        if (Math.abs(dx) < destW/2 && Math.abs(dy) < destH/2) {
-            activeSelectedCutout = config;
-            activeSelectedElement = config;
-            
-            thumbDragSession.activeElement = config;
-            thumbDragSession.isDragging = true;
-            thumbDragSession.startX = x;
-            thumbDragSession.startY = y;
-            thumbDragSession.elemStartX = config.x;
-            thumbDragSession.elemStartY = config.y;
-            
-            if (state.thumbnailMode === 'auto') {
-                state.thumbnailMode = 'manual';
-                syncModeUI();
-            }
-            
-            highlightActiveSelectCard();
-            syncActiveCutoutSliders();
-            drawThumbnail();
-            return;
-        }
-    }
-    
-    // 3. Clear selection on background click
-    activeSelectedCutout = null;
-    activeSelectedElement = null;
-    thumbDragSession.activeElement = null;
-    thumbDragSession.isDragging = false;
-    
-    highlightActiveSelectCard();
-    syncActiveCutoutSliders();
-    drawThumbnail();
-}
-
-function handleCanvasMouseMove(e) {
-    if (!thumbDragSession.isDragging || !thumbDragSession.activeElement) return;
-    
-    const canvas = DOM.thumbnailCanvas;
-    if (!canvas) return;
-    
-    const rect = canvas.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / rect.width * canvas.width;
-    const y = (e.clientY - rect.top) / rect.height * canvas.height;
-    
-    const deltaX = (x - thumbDragSession.startX) / canvas.width * 100;
-    const deltaY = (y - thumbDragSession.startY) / canvas.height * 100;
-    
-    if (thumbDragSession.activeElement === 'text') {
-        state.thumbnailTextX = Math.max(0, Math.min(100, thumbDragSession.elemStartX + deltaX));
-        state.thumbnailTextY = Math.max(0, Math.min(100, thumbDragSession.elemStartY + deltaY));
-    } else {
-        const config = thumbDragSession.activeElement;
-        config.x = Math.max(0, Math.min(100, thumbDragSession.elemStartX + deltaX));
-        config.y = Math.max(0, Math.min(100, thumbDragSession.elemStartY + deltaY));
-    }
-    
-    drawThumbnail();
-}
-
-function handleCanvasMouseUp() {
-    if (thumbDragSession.isDragging) {
-        thumbDragSession.isDragging = false;
-        triggerAutosave();
-    }
-}
-
-// Touch controls helper mapping
-function handleCanvasTouchStart(e) {
-    if (e.touches.length === 1) {
-        handleCanvasMouseDown(e.touches[0]);
-    }
-}
-
-// Auto Collage Generator
-function generateAutoThumbnail() {
-    const gradients = [
-        { start: '#ff4b8b', end: '#2b1055' },
-        { start: '#00c6ff', end: '#0072ff' },
-        { start: '#f857a6', end: '#ff5858' },
-        { start: '#11998e', end: '#38ef7d' },
-        { start: '#ff9966', end: '#ff5e62' },
-        { start: '#a8c0ff', end: '#3f2b96' },
-        { start: '#141e30', end: '#243b55' }
-    ];
-    const grad = gradients[Math.floor(Math.random() * gradients.length)];
-    state.thumbnailBgType = 'gradient';
-    state.thumbnailBgGradStart = grad.start;
-    state.thumbnailBgGradEnd = grad.end;
-    
-    if (DOM.thumbBgColor1) DOM.thumbBgColor1.value = grad.start;
-    if (DOM.thumbBgColor2) DOM.thumbBgColor2.value = grad.end;
-    if (DOM.thumbBgTypeSelect) DOM.thumbBgTypeSelect.value = 'gradient';
-    syncBackgroundUI();
-    
-    const availableSlides = state.slides.filter(s => s.mask);
-    if (availableSlides.length === 0) {
-        showToast("⚠️ Add photos and make cutouts in Step 2 first!", "warning");
-        return;
-    }
-    
-    state.thumbnailCutouts = availableSlides.map((slide, idx) => {
-        return {
-            slideId: slide.id,
-            x: 50,
-            y: 50,
-            scale: 0.8,
-            rotation: 0,
-            zIndex: idx,
-            visible: false
-        };
-    });
-    
-    const countToSelect = Math.min(3, availableSlides.length);
-    const indices = Array.from({ length: availableSlides.length }, (_, i) => i);
-    for (let i = indices.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [indices[i], indices[j]] = [indices[j], indices[i]];
-    }
-    
-    const selectedIndices = indices.slice(0, countToSelect);
-    
-    if (countToSelect === 1) {
-        const item = state.thumbnailCutouts[selectedIndices[0]];
-        item.visible = true;
-        item.x = 50;
-        item.y = 45;
-        item.scale = 1.0;
-        item.rotation = 0;
-    } else if (countToSelect === 2) {
-        const item1 = state.thumbnailCutouts[selectedIndices[0]];
-        item1.visible = true;
-        item1.x = 32;
-        item1.y = 45;
-        item1.scale = 0.85;
-        item1.rotation = -0.15;
-        item1.zIndex = 0;
-        
-        const item2 = state.thumbnailCutouts[selectedIndices[1]];
-        item2.visible = true;
-        item2.x = 68;
-        item2.y = 48;
-        item2.scale = 0.85;
-        item2.rotation = 0.12;
-        item2.zIndex = 1;
-    } else if (countToSelect >= 3) {
-        const item1 = state.thumbnailCutouts[selectedIndices[0]];
-        item1.visible = true;
-        item1.x = 28;
-        item1.y = 48;
-        item1.scale = 0.75;
-        item1.rotation = -0.2;
-        item1.zIndex = 0;
-        
-        const item2 = state.thumbnailCutouts[selectedIndices[1]];
-        item2.visible = true;
-        item2.x = 72;
-        item2.y = 52;
-        item2.scale = 0.75;
-        item2.rotation = 0.18;
-        item2.zIndex = 1;
-        
-        const item3 = state.thumbnailCutouts[selectedIndices[2]];
-        item3.visible = true;
-        item3.x = 50;
-        item3.y = 42;
-        item3.scale = 0.95;
-        item3.rotation = -0.05;
-        item3.zIndex = 2;
-    }
-    
-    state.thumbnailCaption = state.slides[0]?.text || 'MEMORY LANE';
-    if (!state.thumbnailCaption || state.thumbnailCaption === 'Memory Moment') {
-        state.thumbnailCaption = 'MY JOURNAL';
-    }
-    state.thumbnailCaption = state.thumbnailCaption.toUpperCase();
-    if (DOM.thumbCaptionInput) DOM.thumbCaptionInput.value = state.thumbnailCaption;
-    
-    state.thumbnailFont = 'Dela Gothic One';
-    if (DOM.thumbFontSelect) DOM.thumbFontSelect.value = 'Dela Gothic One';
-    
-    state.thumbnailFontSize = 75;
-    if (DOM.thumbFontSize) DOM.thumbFontSize.value = 75;
-    if (DOM.thumbFontSizeVal) DOM.thumbFontSizeVal.textContent = '75px';
-    
-    state.thumbnailTextColor = '#ffffff';
-    if (DOM.thumbCaptionColor) DOM.thumbCaptionColor.value = '#ffffff';
-    
-    state.thumbnailStrokeColor = '#000000';
-    if (DOM.thumbCaptionStroke) DOM.thumbCaptionStroke.value = '#000000';
-    
-    state.thumbnailStrokeWidth = 8;
-    if (DOM.thumbStrokeWidth) DOM.thumbStrokeWidth.value = 8;
-    if (DOM.thumbStrokeWidthVal) DOM.thumbStrokeWidthVal.textContent = '8px';
-    
-    state.thumbnailTextX = 50;
-    state.thumbnailTextY = 82;
-    
-    renderCutoutSelectionList();
-    drawThumbnail();
-    showToast("⚡ Procedurally designed a gorgeous cover collage!", "success");
-}
-
-function handleCanvasTouchMove(e) {
-    if (e.touches.length === 1) {
-        handleCanvasMouseMove(e.touches[0]);
-        e.preventDefault();
-    }
-}
-
-// Open modal trigger
-function openThumbnailDesigner() {
-    DOM.thumbnailModal.style.display = 'flex';
-    
+    // Pause playback if active
     if (state.isPlaying) {
         togglePlayback();
     }
     
-    resizeThumbnailCanvas();
-    
-    // Populating blurred photo dropdown
-    if (DOM.thumbBgBlurSelect) {
-        DOM.thumbBgBlurSelect.innerHTML = '';
-        state.slides.forEach((slide, idx) => {
-            const opt = document.createElement('option');
-            opt.value = idx;
-            opt.textContent = `Photo ${idx + 1}: ${slide.text.substring(0, 15) || 'Moment'}`;
-            DOM.thumbBgBlurSelect.appendChild(opt);
-        });
-        DOM.thumbBgBlurSelect.value = state.thumbnailBgBlurIdx;
+    // Default selected cutouts to all slides if empty
+    if (state.gptSelectedCutouts.length === 0) {
+        state.gptSelectedCutouts = state.slides.map(s => s.id);
     }
     
-    // Sync UI elements
-    syncModeUI();
-    syncBackgroundUI();
-    syncCaptionFormUI();
+    // Sync text and inputs
+    if (DOM.gptCaptionInput) DOM.gptCaptionInput.value = state.gptPosterCaption || '';
+    if (DOM.gptFontStyleSelect) DOM.gptFontStyleSelect.value = state.gptFontStyle || 'aesthetic bold & chunky font, with thick hand-drawn borders';
+    if (DOM.gptLayoutStyleSelect) DOM.gptLayoutStyleSelect.value = state.gptLayoutStyle || 'overlapping layered scrapbook layout, with retro polaroid photo frames and warm indie vibes';
     
-    const availableSlides = state.slides.filter(s => s.mask);
-    if (state.thumbnailCutouts.length === 0 && availableSlides.length > 0) {
-        generateAutoThumbnail();
+    renderGptCutoutList();
+    generateGptPrompt();
+}
+
+function closeGptModal() {
+    if (DOM.gptPromptModal) {
+        DOM.gptPromptModal.style.display = 'none';
+    }
+}
+
+function renderGptCutoutList() {
+    if (!DOM.gptCutoutList) return;
+    DOM.gptCutoutList.innerHTML = '';
+    
+    state.slides.forEach((slide, idx) => {
+        const isSelected = state.gptSelectedCutouts.includes(slide.id);
+        
+        const card = document.createElement('div');
+        card.className = `gpt-cutout-card${isSelected ? ' selected' : ''}`;
+        card.dataset.slideId = slide.id;
+        
+        const img = document.createElement('img');
+        img.src = slide.img.src;
+        
+        const checkbox = document.createElement('div');
+        checkbox.className = 'gpt-cutout-checkbox';
+        if (isSelected) {
+            checkbox.classList.add('checked');
+        }
+        
+        card.appendChild(img);
+        card.appendChild(checkbox);
+        
+        card.addEventListener('click', () => {
+            if (isSelected) {
+                state.gptSelectedCutouts = state.gptSelectedCutouts.filter(id => id !== slide.id);
+            } else {
+                state.gptSelectedCutouts.push(slide.id);
+            }
+            renderGptCutoutList();
+            generateGptPrompt();
+            saveProjectSettingsOnly();
+        });
+        
+        DOM.gptCutoutList.appendChild(card);
+    });
+    
+    if (DOM.gptCutoutCount) {
+        DOM.gptCutoutCount.textContent = `Selected: ${state.gptSelectedCutouts.length}`;
+    }
+}
+
+function generateGptPrompt() {
+    if (!DOM.gptPromptOutput) return;
+    
+    const caption = state.gptPosterCaption || "[ADD POSTER CAPTION]";
+    const fontStyle = state.gptFontStyle || "aesthetic bold & chunky font, with thick hand-drawn borders";
+    const layoutStyle = state.gptLayoutStyle || "overlapping layered scrapbook layout, with retro polaroid photo frames and warm indie vibes";
+    
+    const promptText = `Please create an aesthetic, bold, and cool scrapbook-style collage poster utilizing the uploaded images, following this exact layout and composition structure:
+
+1. SUBJECT CUTOUTS:
+- Isolate the main subjects from the uploaded photos to make clean transparent cutouts.
+- Position these cutouts in an overlapping layered arrangement across the poster layout.
+- Give each cutout a clean, bold white paper-cut sticker stroke/outline to separate them visually and add tactile depth.
+
+2. POLAROID FRAME & PLACEMENT:
+- Place a vintage white Polaroid-style photo frame at a prominent position (e.g. bottom-center).
+- Inside the Polaroid frame, display a key romantic/subject scene from the images.
+
+3. TYPOGRAPHY & CAPTION:
+- Title/Caption text: "${caption}"
+- Font Style: written in a very prominent, ${fontStyle}.
+- Font Placement: positioned at the center or bottom-center (specifically layered over the Polaroid frame border, just like the reference style) to make it look cohesive, bold, and professional.
+
+4. THEME & BACKGROUND:
+- Style: ${layoutStyle}.
+- Color Palette: Harmonious tones derived from the photos, mixed with a warm indie aesthetic, soft drop shadows behind layers to give 3D depth, and clean sticker-like textures.
+- Ensure the final composition is extremely premium, artistic, and looks like a professionally designed poster.`;
+    
+    DOM.gptPromptOutput.value = promptText;
+}
+
+async function copyGptPrompt() {
+    if (!DOM.gptPromptOutput) return;
+    try {
+        await navigator.clipboard.writeText(DOM.gptPromptOutput.value);
+        showToast("✓ Prompt copied to clipboard!", "success");
+        
+        // Auto-download ZIP if checked
+        if (DOM.gptAutoDownloadZip && DOM.gptAutoDownloadZip.checked) {
+            setTimeout(() => {
+                downloadGptCutoutsZip();
+            }, 600);
+        }
+    } catch (err) {
+        console.error("Failed to copy text: ", err);
+        showToast("❌ Failed to copy prompt.", "error");
+    }
+}
+
+async function downloadGptCutoutsZip() {
+    if (!window.JSZip) {
+        showToast("⚠️ JSZip library is not loaded.", "error");
+        return;
+    }
+    
+    const selectedIds = state.gptSelectedCutouts;
+    if (selectedIds.length === 0) {
+        showToast("⚠️ No images selected to download.", "warning");
+        return;
+    }
+    
+    showToast("📦 Generating ZIP file...");
+    
+    const zip = new JSZip();
+    let addedCount = 0;
+    
+    for (let i = 0; i < selectedIds.length; i++) {
+        const slideId = selectedIds[i];
+        const slide = state.slides.find(s => s.id === slideId);
+        if (!slide || !slide.img) continue;
+        
+        try {
+            const resp = await fetch(slide.img.src);
+            const blob = await resp.blob();
+            // Try to extract extension or default to png
+            let ext = 'png';
+            if (slide.img.src.startsWith('data:image/')) {
+                const match = slide.img.src.match(/data:image\/([a-zA-Z0-9+]+);base64/);
+                if (match && match[1]) ext = match[1];
+            } else if (slide.img.src.includes('.')) {
+                ext = slide.img.src.split('.').pop().split('?')[0];
+            }
+            zip.file(`image_${i + 1}.${ext}`, blob);
+            addedCount++;
+        } catch (err) {
+            console.error("Failed to fetch slide image for zip:", err);
+        }
+    }
+    
+    if (addedCount === 0) {
+        showToast("⚠️ No images could be added to the ZIP.", "error");
+        return;
+    }
+    
+    try {
+        const content = await zip.generateAsync({ type: "blob" });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(content);
+        link.download = `collage_photos_${Date.now()}.zip`;
+        link.click();
+        showToast("✓ ZIP downloaded successfully!", "success");
+    } catch (e) {
+        console.error("Failed to generate ZIP:", e);
+        showToast("❌ Failed to create ZIP file.", "error");
+    }
+}
+
+function handlePosterUpload(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = function(evt) {
+        state.thumbnailDataUrl = evt.target.result;
+        updatePosterPreviewUI();
+        saveProjectSettingsOnly();
+        showToast("✓ Custom cover poster uploaded successfully!", "success");
+    };
+    reader.readAsDataURL(file);
+}
+
+function updatePosterPreviewUI() {
+    if (state.thumbnailDataUrl) {
+        if (DOM.posterPreviewImg) {
+            DOM.posterPreviewImg.src = state.thumbnailDataUrl;
+            DOM.posterPreviewImg.style.display = 'block';
+        }
+        if (DOM.posterPreviewPlaceholder) {
+            DOM.posterPreviewPlaceholder.style.display = 'none';
+        }
     } else {
-        renderCutoutSelectionList();
-        drawThumbnail();
+        if (DOM.posterPreviewImg) {
+            DOM.posterPreviewImg.style.display = 'none';
+        }
+        if (DOM.posterPreviewPlaceholder) {
+            DOM.posterPreviewPlaceholder.style.display = 'flex';
+        }
     }
 }
 
-function closeThumbnailDesigner() {
-    DOM.thumbnailModal.style.display = 'none';
-    activeSelectedCutout = null;
-    activeSelectedElement = null;
-}
-
-function saveThumbnailDesigner() {
-    const canvas = DOM.thumbnailCanvas;
-    if (!canvas) return;
-    
-    state.thumbnailDataUrl = canvas.toDataURL('image/png');
-    updateThumbnailPreviewUI();
-    triggerAutosave();
-    closeThumbnailDesigner();
-    showToast("✓ Cover Art design saved & applied!", "success");
-}
-
-function downloadThumbnailPNG() {
-    const canvas = DOM.thumbnailCanvas;
-    if (!canvas) return;
-    
-    const link = document.createElement('a');
-    link.download = `collage_cover_${Date.now()}.png`;
-    link.href = canvas.toDataURL('image/png');
-    link.click();
-}
-
-function highlightActiveSelectCard() {
-    renderCutoutSelectionList();
-}
-
-// Bind all events in the Cover Art Modal
-function setupThumbnailEventListeners() {
-    if (!DOM.btnOpenThumbnailDesigner) return;
-    
-    DOM.btnOpenThumbnailDesigner.addEventListener('click', openThumbnailDesigner);
-    DOM.thumbnailModalClose.addEventListener('click', closeThumbnailDesigner);
-    DOM.thumbnailModalOverlay.addEventListener('click', closeThumbnailDesigner);
-    DOM.btnThumbSave.addEventListener('click', saveThumbnailDesigner);
-    DOM.btnThumbDownload.addEventListener('click', downloadThumbnailPNG);
-    
-    // Design Mode Toggles
-    DOM.btnThumbModeAuto.addEventListener('click', () => {
-        state.thumbnailMode = 'auto';
-        syncModeUI();
-        triggerAutosave();
-    });
-    DOM.btnThumbModeManual.addEventListener('click', () => {
-        state.thumbnailMode = 'manual';
-        syncModeUI();
-        triggerAutosave();
-    });
-    DOM.btnThumbAutoGenerate.addEventListener('click', generateAutoThumbnail);
-    
-    // Background changes
-    DOM.thumbBgTypeSelect.addEventListener('change', (e) => {
-        state.thumbnailBgType = e.target.value;
-        syncBackgroundUI();
-        drawThumbnail();
-        triggerAutosave();
-    });
-    DOM.thumbBgColor1.addEventListener('input', (e) => {
-        if (state.thumbnailBgType === 'solid') {
-            state.thumbnailBgColor = e.target.value;
-        } else {
-            state.thumbnailBgGradStart = e.target.value;
-        }
-        drawThumbnail();
-        triggerAutosave();
-    });
-    DOM.thumbBgColor2.addEventListener('input', (e) => {
-        state.thumbnailBgGradEnd = e.target.value;
-        drawThumbnail();
-        triggerAutosave();
-    });
-    DOM.thumbBgBlurSelect.addEventListener('change', (e) => {
-        state.thumbnailBgBlurIdx = parseInt(e.target.value);
-        drawThumbnail();
-        triggerAutosave();
-    });
-    
-    // Manual transformation sliders
-    DOM.thumbActiveScale.addEventListener('input', (e) => {
-        if (activeSelectedCutout) {
-            activeSelectedCutout.scale = parseFloat(e.target.value) / 100;
-            DOM.thumbActiveScaleVal.textContent = e.target.value + '%';
-            drawThumbnail();
-        }
-    });
-    DOM.thumbActiveScale.addEventListener('change', () => triggerAutosave());
-    
-    DOM.thumbActiveRotation.addEventListener('input', (e) => {
-        if (activeSelectedCutout) {
-            activeSelectedCutout.rotation = parseFloat(e.target.value) * Math.PI / 180;
-            DOM.thumbActiveRotationVal.textContent = e.target.value + '°';
-            drawThumbnail();
-        }
-    });
-    DOM.thumbActiveRotation.addEventListener('change', () => triggerAutosave());
-    
-    // Layers depth reordering
-    DOM.btnThumbLayerUp.addEventListener('click', () => {
-        if (!activeSelectedCutout) return;
-        const currentIdx = activeSelectedCutout.zIndex;
-        const nextCutout = state.thumbnailCutouts
-            .filter(c => c.visible && c.zIndex > currentIdx)
-            .sort((a, b) => a.zIndex - b.zIndex)[0];
-            
-        if (nextCutout) {
-            activeSelectedCutout.zIndex = nextCutout.zIndex;
-            nextCutout.zIndex = currentIdx;
-            drawThumbnail();
-            triggerAutosave();
-        }
-    });
-    
-    DOM.btnThumbLayerDown.addEventListener('click', () => {
-        if (!activeSelectedCutout) return;
-        const currentIdx = activeSelectedCutout.zIndex;
-        const prevCutout = state.thumbnailCutouts
-            .filter(c => c.visible && c.zIndex < currentIdx)
-            .sort((a, b) => b.zIndex - a.zIndex)[0];
-            
-        if (prevCutout) {
-            activeSelectedCutout.zIndex = prevCutout.zIndex;
-            prevCutout.zIndex = currentIdx;
-            drawThumbnail();
-            triggerAutosave();
-        }
-    });
-    
-    // Caption Overlay edits
-    DOM.thumbCaptionInput.addEventListener('input', (e) => {
-        state.thumbnailCaption = e.target.value;
-        drawThumbnail();
-    });
-    DOM.thumbCaptionInput.addEventListener('change', () => triggerAutosave());
-    
-    DOM.thumbFontSelect.addEventListener('change', (e) => {
-        state.thumbnailFont = e.target.value;
-        drawThumbnail();
-        triggerAutosave();
-    });
-    
-    DOM.thumbCaptionColor.addEventListener('input', (e) => {
-        state.thumbnailTextColor = e.target.value;
-        drawThumbnail();
-        triggerAutosave();
-    });
-    
-    DOM.thumbCaptionStroke.addEventListener('input', (e) => {
-        state.thumbnailStrokeColor = e.target.value;
-        drawThumbnail();
-        triggerAutosave();
-    });
-    
-    DOM.thumbFontSize.addEventListener('input', (e) => {
-        state.thumbnailFontSize = parseInt(e.target.value);
-        DOM.thumbFontSizeVal.textContent = e.target.value + 'px';
-        drawThumbnail();
-    });
-    DOM.thumbFontSize.addEventListener('change', () => triggerAutosave());
-    
-    DOM.thumbStrokeWidth.addEventListener('input', (e) => {
-        state.thumbnailStrokeWidth = parseInt(e.target.value);
-        DOM.thumbStrokeWidthVal.textContent = e.target.value + 'px';
-        drawThumbnail();
-    });
-    DOM.thumbStrokeWidth.addEventListener('change', () => triggerAutosave());
-    
-    // Caption Gradient End color
-    if (DOM.thumbCaptionGradEnd) {
-        DOM.thumbCaptionGradEnd.addEventListener('input', (e) => {
-            state.thumbnailGradEnd = e.target.value;
-            drawThumbnail();
-        });
-        DOM.thumbCaptionGradEnd.addEventListener('change', () => triggerAutosave());
+function setupGptPromptEventListeners() {
+    if (DOM.btnOpenGptModal) {
+        DOM.btnOpenGptModal.addEventListener('click', openGptModal);
+    }
+    if (DOM.gptPromptModalClose) {
+        DOM.gptPromptModalClose.addEventListener('click', closeGptModal);
+    }
+    if (DOM.gptPromptModalOverlay) {
+        DOM.gptPromptModalOverlay.addEventListener('click', closeGptModal);
     }
     
-    // Text fill type toggle (Solid / Gradient)
-    if (DOM.thumbFillSolid) {
-        DOM.thumbFillSolid.addEventListener('click', () => {
-            state.thumbnailTextFillType = 'solid';
-            DOM.thumbFillSolid.classList.add('active');
-            DOM.thumbFillGradient.classList.remove('active');
-            drawThumbnail();
-            triggerAutosave();
+    if (DOM.gptCaptionInput) {
+        DOM.gptCaptionInput.addEventListener('input', (e) => {
+            state.gptPosterCaption = e.target.value;
+            generateGptPrompt();
         });
-    }
-    if (DOM.thumbFillGradient) {
-        DOM.thumbFillGradient.addEventListener('click', () => {
-            state.thumbnailTextFillType = 'gradient';
-            DOM.thumbFillGradient.classList.add('active');
-            DOM.thumbFillSolid.classList.remove('active');
-            drawThumbnail();
-            triggerAutosave();
+        DOM.gptCaptionInput.addEventListener('change', () => {
+            saveProjectSettingsOnly();
         });
     }
     
-    // Shadow style preset selector
-    if (DOM.thumbShadowSelect) {
-        DOM.thumbShadowSelect.addEventListener('change', (e) => {
-            state.thumbnailShadowStyle = e.target.value;
-            drawThumbnail();
-            triggerAutosave();
+    if (DOM.gptFontStyleSelect) {
+        DOM.gptFontStyleSelect.addEventListener('change', (e) => {
+            state.gptFontStyle = e.target.value;
+            generateGptPrompt();
+            saveProjectSettingsOnly();
         });
     }
     
-    // Color preset swatch buttons
-    if (DOM.thumbColorPresets) {
-        // Color preset lookup table
-        const PRESETS = {
-            white:  { fill: '#ffffff', grad: '#cccccc', fillType: 'solid' },
-            yellow: { fill: '#FFD700', grad: '#FF8C00', fillType: 'solid' },
-            sunset: { fill: '#FF6B35', grad: '#FFD700', fillType: 'gradient' },
-            candy:  { fill: '#FF6EC7', grad: '#B9F2FF', fillType: 'gradient' },
-            cyber:  { fill: '#00FFFF', grad: '#FF00FF', fillType: 'gradient' },
-            gold:   { fill: '#FCF6BA', grad: '#BF953F', fillType: 'gradient' },
-            neon:   { fill: '#39FF14', grad: '#00FF00', fillType: 'solid' },
-            fire:   { fill: '#FF416C', grad: '#FF4B2B', fillType: 'gradient' }
-        };
-        DOM.thumbColorPresets.querySelectorAll('.color-preset-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const preset = PRESETS[btn.dataset.preset];
-                if (!preset) return;
-                // Remove active from all
-                DOM.thumbColorPresets.querySelectorAll('.color-preset-btn').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                // Apply colors
-                state.thumbnailTextColor = preset.fill;
-                state.thumbnailGradEnd = preset.grad;
-                state.thumbnailTextFillType = preset.fillType;
-                if (DOM.thumbCaptionColor) DOM.thumbCaptionColor.value = preset.fill;
-                if (DOM.thumbCaptionGradEnd) DOM.thumbCaptionGradEnd.value = preset.grad;
-                if (DOM.thumbFillSolid && DOM.thumbFillGradient) {
-                    DOM.thumbFillSolid.classList.toggle('active', preset.fillType === 'solid');
-                    DOM.thumbFillGradient.classList.toggle('active', preset.fillType === 'gradient');
-                }
-                drawThumbnail();
-                triggerAutosave();
-            });
+    if (DOM.gptLayoutStyleSelect) {
+        DOM.gptLayoutStyleSelect.addEventListener('change', (e) => {
+            state.gptLayoutStyle = e.target.value;
+            generateGptPrompt();
+            saveProjectSettingsOnly();
         });
     }
     
-    // Bind Canvas click/drag interactions
-    const canvas = DOM.thumbnailCanvas;
-    canvas.addEventListener('mousedown', handleCanvasMouseDown);
-    window.addEventListener('mousemove', handleCanvasMouseMove);
-    window.addEventListener('mouseup', handleCanvasMouseUp);
+    if (DOM.btnGptSelectAll) {
+        DOM.btnGptSelectAll.addEventListener('click', () => {
+            state.gptSelectedCutouts = state.slides.map(s => s.id);
+            renderGptCutoutList();
+            generateGptPrompt();
+            saveProjectSettingsOnly();
+        });
+    }
     
-    // Touch interactions
-    canvas.addEventListener('touchstart', handleCanvasTouchStart);
-    canvas.addEventListener('touchmove', handleCanvasTouchMove, { passive: false });
-    canvas.addEventListener('touchend', handleCanvasMouseUp);
+    if (DOM.btnGptDeselectAll) {
+        DOM.btnGptDeselectAll.addEventListener('click', () => {
+            state.gptSelectedCutouts = [];
+            renderGptCutoutList();
+            generateGptPrompt();
+            saveProjectSettingsOnly();
+        });
+    }
     
-    // Recalculate on screen resize
-    window.addEventListener('resize', () => {
-        if (DOM.thumbnailModal.style.display === 'flex') {
-            resizeThumbnailCanvas();
-            drawThumbnail();
-        }
-    });
+    if (DOM.btnGptCopyPrompt) {
+        DOM.btnGptCopyPrompt.addEventListener('click', copyGptPrompt);
+    }
+    
+    if (DOM.btnGptDownloadImages) {
+        DOM.btnGptDownloadImages.addEventListener('click', downloadGptCutoutsZip);
+    }
+    
+    if (DOM.btnUploadPoster && DOM.posterUploadInput) {
+        DOM.btnUploadPoster.addEventListener('click', () => {
+            DOM.posterUploadInput.click();
+        });
+        DOM.posterUploadInput.addEventListener('change', handlePosterUpload);
+    }
 }
